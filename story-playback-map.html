@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VOICE story playback mock (interactive map)</title>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css">
+<script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
+<style>
+/* Zero-specificity fallbacks (the app's light palette) so this also works opened as a plain file. */
+:where(:root){--background:oklch(1 0 0);--foreground:oklch(.141 .005 285.8);--muted:oklch(.967 .001 286.4);--muted-foreground:oklch(.552 .016 285.9);--card:oklch(1 0 0);--popover:oklch(1 0 0);--popover-foreground:oklch(.141 .005 285.8);--secondary:oklch(.967 .001 286.4);--secondary-foreground:oklch(.21 .006 285.9);--border:oklch(.92 .004 286.3);--ring:oklch(.705 .015 286);--primary:oklch(.21 .006 285.9);--primary-foreground:oklch(.985 0 0);--info:oklch(.62 .13 240);--success:oklch(.62 .15 150);--warning:oklch(.72 .16 70);--radius:.625rem;--font-sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;--font-mono:ui-monospace,Menlo,monospace}
+:where(body){color:var(--foreground);font-family:var(--font-sans)}
+*{box-sizing:border-box}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+button:focus-visible,[role=slider]:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+.mock{--land:color-mix(in oklab,var(--muted) 72%,var(--background));--street:color-mix(in oklab,var(--foreground) 7%,var(--land));--major:color-mix(in oklab,var(--foreground) 14%,var(--land));--water:color-mix(in oklab,var(--info) 26%,var(--land));--park:color-mix(in oklab,var(--success) 20%,var(--land));--plaza:color-mix(in oklab,var(--warning) 18%,var(--land));max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:10px;font-size:13px;line-height:1.4}
+
+/* Header */
+.hd{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.hd .ti{flex:1;min-width:200px}
+.hd h1{margin:0;font-size:17px;font-weight:600;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
+.hd p{margin:1px 0 0;color:var(--muted-foreground);font-size:12.5px}
+.chip{font-size:10.5px;font-weight:500;color:var(--muted-foreground);border:1px solid var(--border);border-radius:99px;padding:1px 7px;white-space:nowrap}
+.seg{display:flex;padding:3px;gap:2px;background:var(--muted);border-radius:var(--radius)}
+.seg button{padding:5px 11px;border-radius:calc(var(--radius) - 3px);font-size:12.5px;font-weight:500;color:var(--muted-foreground)}
+.seg button[aria-pressed=true]{background:var(--background);color:var(--foreground);box-shadow:0 1px 2px #0002}
+
+/* Stage */
+.stage{position:relative}
+.map{position:relative;height:440px;border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);background:var(--land)}
+#gl{position:absolute;inset:0}
+.mk{width:18px;height:18px;cursor:pointer;display:grid;place-items:center}
+.mk .body{display:grid;place-items:center;width:15px;height:15px;border-radius:50%;background:var(--primary);border:2px solid var(--background);box-shadow:0 1px 3px #0005;animation:pop .28s ease-out;transition:transform .15s}
+.mk .body svg{width:7px;height:8px;fill:var(--primary-foreground);display:none}
+.mk.v .body svg{display:block}
+.mk .pulse{position:absolute;inset:0;border-radius:50%;border:1.5px solid var(--primary);opacity:0;pointer-events:none}
+.mk .tm{position:absolute;bottom:calc(100% + 3px);left:50%;transform:translateX(-50%);font-size:11px;font-weight:600;white-space:nowrap;padding:0 5px;border-radius:99px;background:color-mix(in oklab,var(--background) 86%,transparent);color:var(--foreground);display:none;pointer-events:none}
+.mk.past{opacity:.78}.mk.past .body{transform:scale(.62)}.mk.past .body svg{display:none}
+.mk.live{opacity:1;z-index:2}.mk.live .tm{display:block}.mk.live .pulse{animation:pu 1.8s ease-out infinite}
+.mk.active{z-index:3}.mk.active .body{transform:scale(1.25)}.mk.active .tm{display:block}
+.mk.approx .body{background:var(--background);border:2px dashed var(--primary)}
+.mk.approx .body svg{display:none}
+.mk.hid{display:none}
+.mk:hover .body{transform:scale(1.3)}
+@keyframes pu{0%{transform:scale(.8);opacity:.75}100%{transform:scale(2.5);opacity:0}}
+@keyframes pop{0%{transform:scale(0)}70%{transform:scale(1.25)}100%{transform:scale(1)}}
+.front{width:9px;height:9px;border-radius:50%;background:var(--primary);pointer-events:none}
+.xd{display:none}
+.points .xd{display:grid}
+.points .mk{opacity:1;z-index:0}.points .mk.hid{display:grid}
+.points .mk .body,.xd .body{width:13px;height:13px;background:color-mix(in oklab,var(--background) 82%,transparent);border:1.5px solid var(--foreground);box-shadow:none;transform:none;animation:none}
+.points .mk .body svg,.points .mk .tm,.points .mk .pulse,.points .story-only{display:none}
+.points.hl .mk .body{background:var(--primary);border:2px solid var(--background)}
+.points.hl .xd{opacity:.35}
+.dusk{position:absolute;inset:0;background:#0a1430;opacity:0;pointer-events:none;z-index:1}
+.follow{left:12px;bottom:48px;padding:5px 11px;font-size:12px;font-weight:600;display:none;align-items:center;gap:5px;border-radius:99px;color:var(--foreground)}
+.follow.on{display:flex}
+.follow:hover{background:var(--muted)}
+.mapmsg{position:absolute;inset:0;display:none;place-items:center;text-align:center;padding:20px;color:var(--muted-foreground);z-index:1}
+/* MapLibre chrome: keep clear of the clock and the story card, use the app's tokens */
+.maplibregl-ctrl-top-left{top:78px}
+.mock{--cw:250px}
+.mock:not(.points) .maplibregl-ctrl-bottom-right{right:calc(var(--cw) + 24px)}
+.points .maplibregl-ctrl-top-left{top:0}
+.story-only,.points-only{transition:opacity .2s}
+.points-only{display:none}
+.points .points-only{display:flex}
+/* Point details (Points view) */
+.mock{--dw:285px}
+.detail{display:none;position:absolute;z-index:3;top:12px;right:12px;bottom:12px;width:var(--dw);flex-direction:column;background:var(--popover);color:var(--popover-foreground);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 6px 20px #0002;overflow:hidden}
+.points.sel .detail{display:flex}
+.points.sel .search{right:calc(var(--dw) + 24px)}
+.points.sel .maplibregl-ctrl-bottom-right{right:calc(var(--dw) + 24px)}
+.dh{display:flex;align-items:center;gap:2px;padding:7px 8px 7px 12px;border-bottom:1px solid var(--border);flex:none}
+.dsp{flex:1}
+.pill{font-size:11px;font-weight:500;padding:1px 8px;border-radius:99px;background:var(--secondary);color:var(--secondary-foreground);border:1px solid var(--border)}
+.dbtn{width:27px;height:27px;display:grid;place-items:center;border-radius:50%;color:var(--muted-foreground)}
+.dbtn:hover{background:var(--muted);color:var(--foreground)}
+.dbody{flex:1;min-height:0;overflow-y:auto;padding:10px 12px 12px;display:flex;flex-direction:column;gap:8px}
+.dbody h2{margin:2px 0 0;font-size:15px;font-weight:600;letter-spacing:-.01em;line-height:1.25}
+.desc{margin:-3px 0 0;font-size:12.5px;line-height:1.45}
+.sto{flex:none;display:flex;align-items:center;gap:8px;padding:7px 8px 7px 12px;border-top:1px solid var(--border);background:var(--muted)}
+.stx{flex:1;min-width:0;display:flex;flex-direction:column}
+.stx small{font-size:10px;color:var(--muted-foreground);font-weight:500;line-height:1.2}
+.stx b{font-size:12px;font-weight:600;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stx span{font-size:11px;color:var(--muted-foreground);line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sto button{flex:none;display:flex;align-items:center;gap:4px;padding:5px 9px;border-radius:calc(var(--radius) - 4px);background:var(--primary);color:var(--primary-foreground);font-size:11.5px;font-weight:600;white-space:nowrap}
+.sto button:hover{opacity:.9}
+.detail dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:12px}
+.detail dt{color:var(--muted-foreground)}
+.detail dd{margin:0}
+.co{font-family:var(--font-mono);font-size:10.5px;color:var(--muted-foreground)}
+.tags{display:flex;flex-wrap:wrap;gap:4px}
+.tags span{font-size:11px;padding:1px 7px;border-radius:99px;border:1px solid var(--border);color:var(--muted-foreground)}
+.att{display:flex;align-items:center;gap:5px;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:calc(var(--radius) - 4px)}
+.df{display:flex;align-items:center;justify-content:space-between;padding:6px 8px;border-top:1px solid var(--border);font-size:12px;color:var(--muted-foreground);flex:none}
+.df button{padding:3px 9px;border:1px solid var(--border);border-radius:calc(var(--radius) - 4px);font-size:12px;font-weight:500;color:var(--foreground)}
+.df button:hover{background:var(--muted)}
+.near small{display:block;font-size:11px;font-weight:500;color:var(--muted-foreground);margin-bottom:4px}
+.near .strip{margin:0;padding:0;flex-wrap:wrap}
+.points .mk:not(.xd){z-index:1}
+.points .mk.sel,.points .xd.sel{z-index:4}
+.points .mk.sel .body{background:var(--primary);border:2px solid var(--background);transform:scale(1.3);box-shadow:0 1px 3px #0005}
+.points .mk.sel .pulse{display:block;animation:pu 1.8s ease-out infinite}
+.points .tl,.points .card{display:none}
+
+/* Map overlays */
+.ov{position:absolute;z-index:2;background:color-mix(in oklab,var(--popover) 92%,transparent);backdrop-filter:blur(6px);border:1px solid var(--border);border-radius:var(--radius);color:var(--popover-foreground)}
+.clock{top:12px;left:12px;padding:7px 11px}
+.clock small{display:block;font-size:11px;color:var(--muted-foreground)}
+.clock b{display:block;font-size:21px;font-weight:600;line-height:1.15;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.leg{left:12px;bottom:12px;padding:5px 9px;display:flex;gap:11px;font-size:11px;color:var(--muted-foreground);align-items:center}
+.leg span{display:flex;align-items:center;gap:4px}
+.leg i{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--primary)}
+.leg i.v{border-radius:0;background:none;width:0;height:0;border-left:9px solid var(--primary);border-top:5px solid transparent;border-bottom:5px solid transparent}
+.leg i.a{background:none;border:1.5px dashed var(--primary)}
+.leg i.r{border-radius:2px;height:3px;width:14px}
+.skip{left:0;right:0;top:14px;margin:auto;width:max-content;padding:4px 11px;font-size:12px;font-weight:500;opacity:0;pointer-events:none;transition:opacity .15s}
+.skip.on{opacity:1}
+.search{left:0;right:0;top:12px;margin:auto;width:max-content;padding:5px 13px;font-size:12px;font-weight:500;border-radius:99px;display:none}
+.points .search{display:block}
+.search{pointer-events:none}
+
+/* Story card */
+.card{position:absolute;z-index:3;top:12px;right:12px;bottom:12px;width:250px;padding:12px;background:var(--popover);color:var(--popover-foreground);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 6px 20px #0002;display:flex;flex-direction:column;gap:8px;overflow:hidden}
+.kick{display:flex;justify-content:space-between;font-size:11px;color:var(--muted-foreground);font-weight:500}
+.card h2{margin:-5px 0 0;font-size:15px;font-weight:600;letter-spacing:-.01em;line-height:1.25}
+.narr{margin:-3px 0 0;font-size:12.5px;color:var(--muted-foreground)}
+.scene{position:relative;background-size:cover;overflow:hidden;display:block}
+.scene svg{position:absolute;inset:0;width:100%;height:100%}
+.media{aspect-ratio:16/9;width:100%;border-radius:calc(var(--radius) - 3px);flex:none}
+.badge{position:absolute;left:6px;bottom:6px;font-size:10.5px;font-weight:500;color:#fff;background:#000a;padding:1px 6px;border-radius:99px;display:flex;align-items:center;gap:4px}
+.bigplay{position:absolute;inset:0;margin:auto;width:34px;height:34px;border-radius:50%;background:#000a;display:grid;place-items:center}
+.cap{font-size:12.5px;font-weight:500;line-height:1.3}
+.meta{font-size:11px;color:var(--muted-foreground);margin-top:2px}
+.also{font-size:11.5px;padding:4px 8px;border-radius:calc(var(--radius) - 4px);background:var(--muted);color:var(--foreground);text-align:left;line-height:1.3}
+.also b{font-weight:600}
+.strip{display:flex;gap:4px;margin-top:auto;padding-top:2px}
+.strip button{width:44px;height:32px;border-radius:5px;overflow:hidden;opacity:.6;outline-offset:1px;flex:none}
+.strip button.on{opacity:1;outline:2px solid var(--primary)}
+.strip button:hover{opacity:1}
+
+/* Timeline */
+.tl{position:relative;display:flex;flex-direction:column;gap:6px}
+.track{position:relative;height:74px;margin:0 7px;cursor:pointer;touch-action:none;user-select:none}
+.ch{position:absolute;top:0;height:26px;padding-right:3px}
+.ch span{display:block;font-size:11.5px;font-weight:500;color:var(--muted-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;height:17px}
+.ch.cur span{color:var(--foreground);font-weight:600}
+.ch em{display:none;font-style:normal}
+.ch i{position:absolute;left:0;right:3px;top:18px;height:6px;border-radius:3px;background:var(--muted);overflow:hidden}
+.ch i::after{content:"";position:absolute;inset:0;width:var(--f,0%);background:var(--primary)}
+.gap{position:absolute;top:18px;height:6px;border-radius:3px;background:repeating-linear-gradient(115deg,var(--border) 0 2px,transparent 2px 4px)}
+.tick{position:absolute;top:32px;width:14px;height:16px;margin-left:-7px;display:grid;place-items:center}
+.tick i{display:block;width:8px;height:8px;border-radius:50%;background:var(--border);transition:transform .12s}
+.tick.v i{border-radius:0;background:none;width:0;height:0;border-left:9px solid var(--border);border-top:5px solid transparent;border-bottom:5px solid transparent}
+.tick.a i{background:none;border:1.5px dashed var(--muted-foreground)}
+.tick.done i{background:var(--primary)}
+.tick.v.done i{background:none;border-left-color:var(--primary)}
+.tick.a.done i{background:none;border-color:var(--primary)}
+.tick:hover i{transform:scale(1.35)}
+.band{position:absolute;top:50px;height:4px;border-radius:2px;background:linear-gradient(90deg,transparent,color-mix(in oklab,var(--muted-foreground) 45%,transparent) 15% 85%,transparent)}
+.hr{position:absolute;top:58px;font-size:10.5px;color:var(--muted-foreground);transform:translateX(-50%);white-space:nowrap;font-variant-numeric:tabular-nums}
+.head{position:absolute;top:13px;bottom:18px;width:2px;margin-left:-1px;background:var(--foreground);border-radius:1px;pointer-events:none}
+.head::before{content:"";position:absolute;left:-5px;top:-1px;width:12px;height:12px;border-radius:50%;background:var(--foreground);border:2px solid var(--background)}
+.tip{position:absolute;bottom:calc(100% + 4px);transform:translateX(-50%);max-width:220px;width:max-content;padding:5px 9px;font-size:11.5px;line-height:1.3;background:var(--popover);color:var(--popover-foreground);border:1px solid var(--border);border-radius:calc(var(--radius) - 3px);box-shadow:0 3px 12px #0003;pointer-events:none;display:none;z-index:6}
+.tip b{font-weight:600;font-variant-numeric:tabular-nums}
+.ctl{display:flex;align-items:center;gap:6px}
+.ic{width:32px;height:32px;display:grid;place-items:center;border-radius:50%;color:var(--foreground)}
+.ic:hover{background:var(--muted)}
+.play{width:42px;height:42px;display:grid;place-items:center;border-radius:50%;background:var(--primary);color:var(--primary-foreground);flex:none;transition:transform .1s}
+.play:hover{transform:scale(1.05)}
+.ctl .now{margin-left:8px;min-width:0;flex:1}
+.ctl .now b{display:block;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ctl .now span{display:block;font-size:11.5px;color:var(--muted-foreground);white-space:nowrap}
+.spd{padding:4px 9px;font-size:12px;font-weight:600;border:1px solid var(--border);border-radius:99px;font-variant-numeric:tabular-nums;min-width:40px}
+.spd:hover{background:var(--muted)}
+
+/* "Today" bottom bar: the entry point */
+.entry{align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius);min-height:116px}
+.entry .now{flex:1;min-width:0}
+.entry b{display:block;font-size:14px;font-weight:600}
+.entry span{display:block;font-size:12.5px;color:var(--muted-foreground)}
+
+@media (min-width:1000px){.map{height:560px}.card{width:290px}.mock{--cw:290px;--dw:320px}}
+@media (max-width:600px){
+  .stage{display:contents}
+  .map{height:290px;order:1}.tl{order:2}.card{order:3;position:static;width:auto;box-shadow:none}.entry{order:2}.detail{order:3;position:static;width:auto;box-shadow:none}.dbody{overflow:visible}.points.sel .search{right:0}.points.sel .maplibregl-ctrl-bottom-right{right:0}
+  .leg{display:none}.follow{bottom:12px}.mock:not(.points) .maplibregl-ctrl-bottom-right{right:0}.clock b{font-size:17px}.clock{padding:5px 9px}
+  .ch span{text-align:left}.ch .t{display:none}.ch em{display:inline}
+  .spd{min-width:36px}
+}
+@media (prefers-reduced-motion:reduce){.mk.live .pulse{animation:none}}
+</style>
+</head>
+<body>
+<div class="mock" id="mock">
+  <div class="hd" style="order:0">
+    <div class="ti">
+      <h1><span id="ttl">March over the Brooklyn Bridge</span> <span class="chip">Fictional sample data</span></h1>
+      <p id="sub"></p>
+    </div>
+    <div class="seg" role="group" aria-label="Mock view">
+      <button id="mPoints" aria-pressed="false">Today: points</button>
+      <button id="mStory" aria-pressed="true">Story view</button>
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="map" id="map">
+      <div id="gl"></div>
+      <div class="dusk" id="dusk"></div>
+      <div class="mapmsg" id="mapmsg">The map needs a network connection to load its library and tiles.</div>
+      <div class="ov clock story-only"><small>Sat, Mar 14</small><b id="clock"></b><small id="tod"></small></div>
+      <div class="ov skip" id="skip">Skipping 2 hours with no uploads</div>
+      <div class="ov search">Search this area</div>
+      <button class="ov follow story-only" id="follow"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="8" r="4.5"/><path d="M8 1v3M8 12v3M1 8h3M12 8h3"/></svg>Follow story</button>
+      <div class="ov leg story-only"><span><i></i>Photo</span><span><i class="v"></i>Video</span><span><i class="a"></i>Approx. time</span><span><i class="r"></i>Route</span></div>
+    </div>
+    <aside class="card" id="card" aria-live="polite"></aside>
+    <aside class="detail" id="detail" aria-live="polite" aria-label="Point details"></aside>
+  </div>
+
+  <div class="tl" id="tl" style="order:2">
+    <div class="track" id="track" role="slider" tabindex="0" aria-label="Story time" aria-valuemin="0" aria-valuemax="100">
+      <div class="tip" id="tip"></div>
+    </div>
+    <div class="ctl">
+      <button class="ic" id="prev" aria-label="Previous chapter"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2.5h1.8v11H3zM13.5 2.8v10.4L5.8 8z"/></svg></button>
+      <button class="play" id="play" aria-label="Play"></button>
+      <button class="ic" id="next" aria-label="Next chapter"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M11.2 2.5H13v11h-1.8zM2.5 2.8v10.4L10.2 8z"/></svg></button>
+      <div class="now"><b id="nowT"></b><span id="nowS"></span></div>
+      <button class="spd" id="spd" aria-label="Playback speed">1×</button>
+    </div>
+  </div>
+
+  <div class="entry points-only" style="order:2">
+    <button class="play" id="start" aria-label="Play this story"><svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.2v11.6L13.5 8z"/></svg></button>
+    <div class="now"><b>Play this story: March over the Brooklyn Bridge</b><span>15 of the points in this area belong to one event on Sat, Mar 14. Press play to see them unfold.</span></div>
+  </div>
+</div>
+<script>const $=s=>document.querySelector(s),mock=$('#mock'),mapEl=$('#map'),track=$('#track');
+const fmt=m=>{m=Math.round(m);let h=Math.floor(m/60),n=m%60,a=h>=12?'PM':'AM';h=h%12||12;return `${h}:${String(n).padStart(2,'0')} ${a}`};
+const clamp=(v,a=0,b=1)=>Math.min(b,Math.max(a,v));
+const STORY_SUB='Sat, Mar 14 · 15 uploads from 9 contributors · Story arranged by VOICE';
+$('#sub').textContent=STORY_SUB;
+
+/* Time axis: real minutes after midnight, with the empty 4:30-6:30 PM stretch compressed. */
+const T0=600,G0=990,G1=1110,GW=.04,K=(1-GW)/510,A=(G0-T0)*K;
+const xOf=t=>t<=G0?(t-T0)*K:t<=G1?A+(t-G0)/(G1-G0)*GW:A+GW+(t-G1)*K;
+const tOf=p=>p<=A?T0+p/K:p<=A+GW?G0+(p-A)/GW*(G1-G0):G1+(p-A-GW)/K;
+
+const chapters=[
+ {s:600,e:690,t:'Gathering',n:'People start arriving at Cadman Plaza around 10 AM. By late morning the central lawn is full.',cam:{center:[-73.9905,40.6985],zoom:16,bearing:-15}},
+ {s:690,e:785,t:'The march sets off',n:'The front of the march leaves the plaza and climbs the ramp onto the bridge walkway.',cam:{center:[-73.9918,40.7018],zoom:15.5,bearing:-40}},
+ {s:785,e:855,t:'On the bridge',n:'The walkway fills between the towers as the march crosses toward Manhattan.',cam:{center:[-74.0,40.7085],zoom:15,bearing:-40}},
+ {s:855,e:990,t:'Stopped at Centre St',n:'Barriers halt the march at the Manhattan end. At about the same time, a second group heads west along Chambers St.',cam:{center:[-74.0044,40.7132],zoom:16,bearing:-10}},
+ {s:1110,e:1230,t:'Vigil at Foley Square',n:'After a quiet stretch, people return to the square at dusk for a candlelight vigil.',cam:{center:[-74.0028,40.7147],zoom:17,bearing:20}}];
+const OVERVIEW={center:[-73.9985,40.7052],zoom:13.45,bearing:0};
+const items=[
+ {t:605,ll:[-73.99045,40.69795],k:'p',c:0,cap:"First groups arrive at the park entrance",pl:"Cadman Plaza Park"},
+ {t:640,ll:[-73.99095,40.69825],k:'v',c:0,cap:"Volunteers hand out water and signs",pl:"Cadman Plaza Park",d:'0:18'},
+ {t:672,ll:[-73.99025,40.69885],k:'p',c:0,cap:"The crowd fills the central lawn",pl:"Cadman Plaza Park"},
+ {t:698,ll:[-73.98989,40.70007],k:'v',c:1,cap:"The front of the march leaves the park",pl:"Cadman Plaza",d:'0:32'},
+ {t:730,ll:[-73.99176,40.70204],k:'p',c:1,cap:"Looking back from the top of the ramp",pl:"Brooklyn Bridge approach"},
+ {t:764,ll:[-73.99405,40.70391],k:'p',c:1,cap:"The first banners reach the Brooklyn tower",pl:"Brooklyn Bridge"},
+ {t:788,ll:[-73.9983,40.70719],k:'v',c:2,cap:"Mid-span, with Manhattan ahead",pl:"Brooklyn Bridge",d:'0:41'},
+ {t:822,ll:[-74.00259,40.71064],k:'p',c:2,cap:"The walkway full on the Manhattan side",pl:"Brooklyn Bridge"},
+ {t:862,ll:[-74.00372,40.71333],k:'v',c:3,cap:"Barriers block the way at Centre St",pl:"Centre St",d:'0:27'},
+ {t:895,ll:[-74.00636,40.71387],k:'p',c:3,cap:"A second group heads west on Chambers St",pl:"Chambers St",also:'<b>Same hour, different place.</b> The main group is still at the barrier on Centre St.',jump:10},
+ {t:912,ll:[-74.00331,40.71368],k:'v',c:3,cap:"Chanting at the barrier",pl:"Centre St",d:'0:24',also:'<b>Meanwhile, 17 min earlier:</b> a second group on Chambers St.',jump:9},
+ {t:940,ll:[-74.00444,40.71274],k:'p',c:3,cap:"Signs left along the railing",pl:"Centre St",approx:1},
+ {t:1128,ll:[-74.00314,40.71448],k:'p',c:4,cap:"People return to the square at dusk",pl:"Foley Square"},
+ {t:1170,ll:[-74.00275,40.71475],k:'v',c:4,cap:"Candles around the fountain",pl:"Foley Square",d:'0:52'},
+ {t:1212,ll:[-74.00235,40.71505],k:'p',c:4,cap:"The last of the crowd heads home",pl:"Foley Square"}];
+const DESC=['Taken just after 10 from the southern path. Small groups with hand-painted signs waiting near the entrance.','Short clip of volunteers at a folding table passing out bottled water and blank signs.','Wide shot of the lawn about an hour in. It was hard to find a place to stand by this point.','The first rows moving out of the plaza toward the bridge ramp, chanting.','Taken from the top of the ramp, looking back at the people still coming up behind us.','Banners held up at the stone tower on the Brooklyn side. The walkway narrows here.','Walking clip from the middle of the bridge. You can hear the traffic under the walkway.','Looking ahead on the walkway near the Manhattan side. No gaps in the crowd from here to the end of the bridge.','Metal barriers across the street at the end of the route. People stopped and bunched up behind them.','A smaller group split off and walked west. I followed them for a few minutes and took this.','Chanting right at the barrier. Recorded from a few rows back, so the audio is better than the picture.','Found this on my phone afterward and the timestamp is gone. I remember it being sometime in the afternoon.','People walking back into the square as the light started to go.','Candles on the ground around the fountain. Mostly quiet, a few people speaking.','Last photo of the night. Most people had left and a few were collecting the candles.'];
+const CH_TAGS=[['gathering','Cadman Plaza'],['march','Brooklyn Bridge'],['march','Brooklyn Bridge'],['barrier','Centre St'],['vigil','Foley Square']];
+items.forEach((it,i)=>{it.desc=DESC[i];it.tags=CH_TAGS[it.c];it.date='Sat, Mar 14';it.storyIdx=i});
+items[1].att='volunteer-flyer.pdf';
+const OTHER=[
+ {k:'p',cap:'Mural on a side street',desc:'New mural that went up over the winter. The artist was still touching up one corner.',tags:['art'],date:'Sun, Feb 8',t:840},
+ {k:'p',cap:'Block party setup',desc:'Tables going out before the street closed to cars for the afternoon.',tags:['community'],date:'Sat, Jun 6',t:690},
+ {k:'v',d:'0:21',cap:'Street performers near the subway',desc:'A brass band playing by the station entrance during the evening rush.',tags:['music'],date:'Thu, Apr 23',t:1110,att:'set-list.jpg'},
+ {k:'p',cap:'Community garden cleanup',desc:'Neighbors clearing out the beds at the start of spring.',tags:['community','garden'],date:'Sat, Mar 28',t:630},
+ {k:'p',cap:'Notice on a closed storefront',desc:'Handwritten thank-you note left on the door after the shop closed. I am not sure exactly when I took this.',tags:['neighborhood'],date:null,t:800},
+ {k:'v',d:'0:37',cap:'Bike lane opening',desc:'Riders trying out the new protected lane on its first morning.',tags:['transit'],date:'Mon, May 11',t:660},
+ {k:'p',cap:'Weekend market',desc:'Produce stalls at the Saturday market, busier than usual because of the weather.',tags:['market'],date:'Sat, May 2',t:700},
+ {k:'p',cap:'Neighborhood meeting',desc:'Residents at a meeting about changes to the local bus routes.',tags:['community','transit'],date:'Tue, Jan 20',t:1140}];
+const ROUTE=[[-73.99045,40.69855],[-73.99046,40.6987],[-73.99028,40.69885],[-73.9902,40.69912],[-73.99027,40.69933],[-73.99044,40.69948],[-73.99043,40.69964],[-73.99015,40.69976],[-73.98989,40.70002],[-73.98984,40.70056],[-73.99205,40.70226],[-73.99438,40.70418],[-73.9983,40.70719],[-74.00443,40.71211],[-74.00457,40.71239],[-74.00455,40.71263],[-74.00448,40.71269],[-74.00437,40.71265],[-74.00348,40.71357],[-74.00309,40.71382],[-74.00332,40.71397],[-74.00295,40.71438],[-74.00297,40.71449],[-74.00286,40.71452],[-74.00269,40.71493],[-74.00256,40.71501]],BRANCH=[[-74.00388,40.71315],[-74.00408,40.71325],[-74.00429,40.71312],[-74.00496,40.71348],[-74.00625,40.71402],[-74.00636,40.71387]];
+const FRONT=[[690,0],[785,0.332],[855,0.915],[990,0.915],[1110,.97],[1128,1]];
+const frontAt=t=>{if(t<=FRONT[0][0])return 0;for(let i=1;i<FRONT.length;i++)if(t<=FRONT[i][0]){const[a,b]=FRONT[i-1],[c,d]=FRONT[i];return b+(d-b)*(t-a)/(c-a)}return 1};
+/* The other 26 points in the area: unrelated uploads, on land only. */
+const rng=(s=>()=>(s=(s*16807)%2147483647)/2147483647)(4242);
+const apart=(a,b,m)=>Math.hypot((a[0]-b[0])*84300,(a[1]-b[1])*111200)>m;
+const extras=[];
+while(extras.length<26){const i=extras.length,man=i%2==0,ll=(man?[-74.012+rng()*.009,40.709+rng()*.013]:[-73.992+rng()*.014,40.690+rng()*.010]).map(v=>+v.toFixed(5));
+ if(items.every(x=>apart(x.ll,ll,130))&&extras.every(x=>apart(x.ll,ll,110)))extras.push({...OTHER[i%OTHER.length],ll,pl:man?'Lower Manhattan':'Downtown Brooklyn',c:9})}
+const allPoints=[...items,...extras];
+const todOf=t=>t<720?'Morning':t<1080?'Afternoon':t<1170?'Evening':'Night';
+
+/* Route slicing: the revealed trail is the first f of the path, by distance. */
+const seg=(a,b)=>Math.hypot((a[0]-b[0])*84300,(a[1]-b[1])*111200);
+const cum=[0];for(let i=1;i<ROUTE.length;i++)cum.push(cum[i-1]+seg(ROUTE[i-1],ROUTE[i]));
+const TOTAL=cum[cum.length-1];
+function along(f){const d=f*TOTAL,out=[ROUTE[0]];for(let i=1;i<ROUTE.length;i++){if(cum[i]<=d){out.push(ROUTE[i]);continue}const s=(d-cum[i-1])/(cum[i]-cum[i-1]);out.push([ROUTE[i-1][0]+(ROUTE[i][0]-ROUTE[i-1][0])*s,ROUTE[i-1][1]+(ROUTE[i][1]-ROUTE[i-1][1])*s]);break}return out}
+const line=c=>({type:'Feature',properties:{},geometry:{type:'LineString',coordinates:c}});
+
+/* MapLibre paint values can't use CSS variables, so resolve theme colors to rgb. */
+const ctx=document.createElement('canvas').getContext('2d',{willReadFrequently:true});
+function themeRGB(name){const el=document.createElement('i');el.style.color=`var(${name})`;document.body.append(el);const col=getComputedStyle(el).color;el.remove();ctx.clearRect(0,0,1,1);ctx.fillStyle=col;ctx.fillRect(0,0,1,1);return[...ctx.getImageData(0,0,1,1).data].slice(0,3)}
+const css=a=>`rgb(${a.join(',')})`,bg=themeRGB('--background'),isDark=(bg[0]*.3+bg[1]*.59+bg[2]*.11)<110;
+
+/* Placeholder "photos": generated silhouettes tinted by time of day. */
+function scene(it,i){
+ const sky={Morning:'#bcd7ea,#f3ead7',Afternoon:'#8fbfe3,#e3edf1',Evening:'#3a3f73,#e08d62',Night:'#0f1a3a,#2c3460'}[todOf(it.t)];
+ const r=(s=>()=>(s=(s*16807)%2147483647)/2147483647)(i*97+13);
+ let b='',c='';
+ for(let x=-5;x<165;){const w=14+r()*22,h=18+r()*38;b+=`<rect x="${x|0}" y="${70-h|0}" width="${w|0}" height="${h+30|0}"/>`;x+=w+1}
+ for(let k=0;k<24;k++){const x=r()*165,y=70+r()*22,s=2.4+(y-70)*.1;c+=`<circle cx="${x|0}" cy="${y-s*1.5|0}" r="${s.toFixed(1)}"/><rect x="${x-s*1.2|0}" y="${y-s*.6|0}" width="${s*2.4|0}" height="${s*6|0}" rx="${s|0}"/>`}
+ const glow=it.c==4&&it.t>1140?Array.from({length:14},()=>`<circle cx="${r()*160|0}" cy="${74+r()*20|0}" r="1.2" fill="#ffd27a"/>`).join(''):'';
+ const sign=it.c<4?`<rect x="${30+r()*80|0}" y="${44+r()*8|0}" width="26" height="13" fill="#f5f5f0"/>`:'';
+ return `<span class="scene" style="width:100%;height:100%;background-image:linear-gradient(${sky})"><svg viewBox="0 0 160 100" preserveAspectRatio="xMidYMax slice" aria-hidden="true"><g fill="#0003">${b}</g>${sign}<g fill="#141c2ccc">${c}</g>${glow}</svg></span>`}
+
+/* Timeline */
+let th='';
+chapters.forEach((c,i)=>{const a=xOf(c.s),b=xOf(c.e);th+=`<div class="ch" data-c="${i}" style="left:${a*100}%;width:${(b-a)*100}%"><span><em>${i+1}</em><span class="t">${c.t}</span></span><i></i></div>`});
+th+=`<div class="gap" style="left:${A*100}%;width:${GW*100}%"></div>`;
+th+=`<div class="band" style="left:${xOf(720)*100}%;width:${(xOf(1020)-xOf(720))*100}%"></div>`;
+[[600,'10 AM'],[720,'12 PM'],[840,'2 PM'],[960,'4 PM'],[1140,'7 PM'],[1200,'8 PM']].forEach(([t,l])=>th+=`<div class="hr" style="left:${xOf(t)*100}%${t==600?';transform:none':''}">${l}</div>`);
+items.forEach((it,i)=>th+=`<button class="tick ${it.k}${it.approx?' a':''}" data-i="${i}" style="left:${xOf(it.t)*100}%" aria-label="${it.approx?'About':fmt(it.t)}: ${it.cap}"><i></i></button>`);
+th+=`<div class="head" id="head"></div>`;
+track.insertAdjacentHTML('beforeend',th);
+const ticks=[...document.querySelectorAll('.tick')],chs=[...document.querySelectorAll('.ch')],head=$('#head'),tip=$('#tip');
+
+/* State */
+let p=xOf(920),playing=false,mode='story',speeds=[1,2,4],si=0,activeKey=null,follow=true,camKey=null,lastF=-1,branchOn=null,ready=false,map=null,scrubbing=false;
+const DUR=48,narrow=matchMedia('(max-width:600px)'),reducedMotion=matchMedia('(prefers-reduced-motion:reduce)').matches;
+const PLAY='<svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.2v11.6L13.5 8z"/></svg>',PAUSE='<svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M3.5 2.5h3.2v11H3.5zM9.3 2.5h3.2v11H9.3z"/></svg>';
+const playBtn=$('#play');
+function setPlaying(v){playing=v;playBtn.innerHTML=v?PAUSE:PLAY;playBtn.setAttribute('aria-label',v?'Pause':'Play')}
+const chapterAt=t=>{let c=0;chapters.forEach((h,i)=>{if(t>=h.s)c=i});return c};
+const activeAt=t=>{let a=0;items.forEach((it,i)=>{if(t>=it.t)a=i});return a};
+const jumpTo=i=>{p=clamp(xOf(items[i].t)+1e-4)};
+
+function renderCard(a,c){
+ const it=items[a],h=chapters[c],vid=it.k=='v';
+ const when=it.approx?'≈ Afternoon · no exact time recorded':fmt(it.t);
+ const inCh=items.map((x,i)=>[x,i]).filter(([x])=>x.c==c);
+ $('#card').innerHTML=`<div class="kick"><span>Chapter ${c+1} of ${chapters.length}</span><span>${a+1} / ${items.length}</span></div>
+ <h2>${h.t}</h2><p class="narr">${h.n}</p>
+ <div class="media scene" style="border-radius:calc(var(--radius) - 3px)">${scene(it,a)}${vid?`<span class="bigplay">${PLAY.replace('fill="currentColor"','fill="#fff"')}</span>`:''}<span class="badge">${vid?'Video · '+it.d:'Photo'}</span></div>
+ <div><div class="cap">${it.cap}</div><div class="meta">${when} · ${it.pl} · Anonymous contributor</div></div>
+ ${it.also?`<button class="also" data-j="${it.jump}">${it.also}</button>`:''}
+ <div class="strip">${inCh.map(([x,i])=>`<button class="${i==a?'on':''}" data-j="${i}" aria-label="${x.cap}">${scene(x,i)}</button>`).join('')}</div>`;
+}
+$('#card').addEventListener('click',e=>{const b=e.target.closest('[data-j]');if(b){jumpTo(+b.dataset.j);setPlaying(false)}});
+
+/* Map */
+const mkEls=[],xdEls=[];let frontMk=null,selected=null;
+const NO_PAD={top:0,bottom:0,left:0,right:0};
+const camPadding=()=>mode=='story'&&!narrow.matches?{top:30,bottom:30,left:30,right:$('#card').offsetWidth+24}:NO_PAD;
+/* Points view: clicking a point opens its details beside the map. */
+const ICON={report:'<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M3.5 14.5V2.2M3.5 2.5h9l-2 3.2 2 3.3h-9"/></svg>',street:'<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="3.4" r="1.9"/><path d="M5.4 8.2c0-1.2 1-1.9 2.6-1.9s2.6.7 2.6 1.9v2.3H9.5l-.4 4H6.9l-.4-4H5.4z" stroke-linejoin="round"/></svg>',close:'<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9"/></svg>',file:'<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M4 1.5h5.5L12.5 4.5v10H4zM9.5 1.5v3h3"/></svg>'};
+const markerEl=i=>i<items.length?mkEls[i]:xdEls[i-items.length];
+/* Markers can overlap when zoomed out, so a click also lists every point stacked at that spot. */
+let nearby=[];
+function pointsAt(i){const o=map.project(allPoints[i].ll);return allPoints.map((_,j)=>j).filter(j=>{const q=map.project(allPoints[j].ll);return Math.hypot(q.x-o.x,q.y-o.y)<=16})}
+function renderDetail(i){
+ const it=allPoints[i],vid=it.k=='v',inStory=it.storyIdx!==undefined;
+ const when=it.approx?`${it.date} · ≈ Afternoon (no exact time recorded)`:it.date?`${it.date} · ${fmt(it.t)}`:'Date not recorded';
+ $('#detail').innerHTML=`<div class="dh"><span class="pill">${vid?'Video':'Image'}</span><span class="dsp"></span>
+  <button class="dbtn" title="Report this item (not wired up in this mock)" aria-label="Report this item">${ICON.report}</button>
+  <button class="dbtn" title="Street View (not wired up in this mock)" aria-label="Open Street View">${ICON.street}</button>
+  <button class="dbtn" id="dClose" title="Close" aria-label="Close details">${ICON.close}</button></div>
+ <div class="dbody" tabindex="0">
+  ${nearby.length>1?`<div class="near"><small>${nearby.length} points at this spot</small><div class="strip">${nearby.map(j=>`<button class="${j==i?'on':''}" data-n="${j}" title="${allPoints[j].cap}" aria-label="${allPoints[j].cap}">${scene(allPoints[j],j)}</button>`).join('')}</div></div>`:''}
+  <div class="media scene">${scene(it,i)}${vid?`<span class="bigplay">${PLAY.replace('fill="currentColor"','fill="#fff"')}</span><span class="badge">${it.d}</span>`:''}</div>
+  <h2>${it.cap}</h2>
+  <p class="desc">${it.desc}</p>
+  <dl><dt>Captured</dt><dd>${when}</dd><dt>Location</dt><dd>${it.pl}<br><span class="co">${it.ll[1].toFixed(5)}, ${it.ll[0].toFixed(5)}</span></dd><dt>Uploaded by</dt><dd>Anonymous contributor</dd></dl>
+  <div class="tags">${it.tags.map(t=>`<span>${t}</span>`).join('')}</div>
+  ${it.att?`<div class="att">${ICON.file}${it.att}</div>`:''}
+ </div>
+ ${inStory?`<div class="sto"><div class="stx"><small>Part of a story</small><b title="March over the Brooklyn Bridge">March over the Brooklyn Bridge</b><span>Chapter ${it.c+1}: ${chapters[it.c].t}</span></div><button id="dPlay" aria-label="Play the story from this moment">${PLAY.replace(/width="18" height="18"/,'width="11" height="11"')}Play from here</button></div>`:''}
+ <div class="df"><button id="dPrev" aria-label="Previous point">‹ Prev</button><span>${i+1} of ${allPoints.length}</span><button id="dNext" aria-label="Next point">Next ›</button></div>`;
+}
+function selectPoint(i,keepNearby){
+ if(selected!==null)markerEl(selected).classList.remove('sel');
+ if(!keepNearby)nearby=pointsAt(i);
+ selected=i;mock.classList.add('sel');markerEl(i).classList.add('sel');renderDetail(i);
+ const pad=narrow.matches?NO_PAD:{...NO_PAD,right:$('#detail').offsetWidth+24};
+ map.easeTo({center:allPoints[i].ll,padding:pad,duration:reducedMotion?0:600});
+ if(narrow.matches)$('#detail').scrollIntoView({block:'nearest',behavior:'smooth'});
+}
+function closeDetail(){if(selected===null)return;markerEl(selected).classList.remove('sel');selected=null;mock.classList.remove('sel');$('#detail').innerHTML='';if(mode=='points')map.easeTo({padding:NO_PAD,duration:reducedMotion?0:400})}
+$('#detail').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+ if(b.dataset.n!==undefined)selectPoint(+b.dataset.n,true);
+ else if(b.id=='dClose')closeDetail();
+ else if(b.id=='dPrev')selectPoint((selected-1+allPoints.length)%allPoints.length);
+ else if(b.id=='dNext')selectPoint((selected+1)%allPoints.length);
+ else if(b.id=='dPlay'){const i=selected;setMode('story');jumpTo(i);setPlaying(true)}});
+function setFollow(v){follow=v;$('#follow').classList.toggle('on',!v&&mode=='story')}
+function moveCamera(key,instant){
+ camKey=key;const cam=key=='overview'?OVERVIEW:chapters[key].cam;
+ const opts={...cam,pitch:45,padding:camPadding()};
+ if(instant)map.jumpTo(opts);
+ else map.flyTo({...opts,duration:scrubbing||!playing?1100:2400/speeds[si],curve:1.2});
+}
+function initMap(){
+ if(!window.maplibregl){$('#mapmsg').style.display='grid';return}
+ const start=chapters[chapterAt(tOf(p))].cam;
+ map=new maplibregl.Map({container:'gl',style:`https://tiles.openfreemap.org/styles/${isDark?'dark':'positron'}`,...start,pitch:45,attributionControl:false,maxPitch:70});
+ map.addControl(new maplibregl.NavigationControl({visualizePitch:true}),'top-left');
+ map.addControl(new maplibregl.AttributionControl({compact:true}),'bottom-right');
+ map.setPadding(camPadding());
+ /* Dragging, zooming or rotating takes the camera away from the story until "Follow story". */
+ ['dragstart','zoomstart','rotatestart','pitchstart'].forEach(ev=>map.on(ev,e=>{if(e.originalEvent&&mode=='story')setFollow(false)}));
+ map.on('error',e=>{if(!map.isStyleLoaded()&&!ready&&!(e.sourceId)){$('#mapmsg').style.display='grid'}});
+ items.forEach((it,i)=>{
+  const el=document.createElement('div');el.className=`mk ${it.k}${it.approx?' approx':''} hid`;
+  el.innerHTML=`<i class="pulse"></i><i class="body"><svg viewBox="0 0 7 8"><path d="M0 0v8l7-4z"/></svg></i><span class="tm">${it.approx?'≈ afternoon':fmt(it.t)}</span>`;
+  el.addEventListener('click',e=>{e.stopPropagation();if(mode=='story'){jumpTo(i);setPlaying(false)}else selectPoint(i)});el.title=it.cap;
+  new maplibregl.Marker({element:el,pitchAlignment:'viewport',rotationAlignment:'viewport'}).setLngLat(it.ll).addTo(map);mkEls.push(el)});
+ const fe=document.createElement('div');fe.className='front story-only';frontMk=new maplibregl.Marker({element:fe,pitchAlignment:'viewport'}).setLngLat(ROUTE[0]).addTo(map);
+ extras.forEach((it,i)=>{
+  const el=document.createElement('div');el.className='mk xd';el.innerHTML='<i class="pulse"></i><i class="body"></i>';el.title=it.cap;
+  el.addEventListener('click',e=>{e.stopPropagation();selectPoint(items.length+i)});
+  new maplibregl.Marker({element:el,pitchAlignment:'viewport',rotationAlignment:'viewport'}).setLngLat(it.ll).addTo(map);xdEls.push(el)});
+ map.on('click',()=>{if(mode=='points')closeDetail()});
+ map.on('load',()=>{
+  const primary=css(themeRGB('--primary')),halo=css(themeRGB('--background'));
+  map.addSource('route',{type:'geojson',data:line(ROUTE.slice(0,2))});
+  map.addSource('branch',{type:'geojson',data:line(BRANCH)});
+  const lay={'line-cap':'round','line-join':'round'};
+  map.addLayer({id:'route-halo',type:'line',source:'route',layout:lay,paint:{'line-color':halo,'line-width':8,'line-opacity':.8}});
+  map.addLayer({id:'route',type:'line',source:'route',layout:lay,paint:{'line-color':primary,'line-width':4}});
+  map.addLayer({id:'branch',type:'line',source:'branch',layout:lay,paint:{'line-color':primary,'line-width':3,'line-dasharray':[.1,2.2],'line-opacity':0}});
+  /* MapLibre opens compact attribution on load, over the legend. Start it collapsed behind its (i) button. */
+  document.querySelectorAll('.maplibregl-ctrl-attrib').forEach(e=>{e.classList.remove('maplibregl-compact-show');e.removeAttribute('open')});
+  ready=true;lastF=-1;branchOn=null;syncLayers()});
+ new ResizeObserver(()=>map.resize()).observe(mapEl);
+}
+function syncLayers(){if(!ready)return;const v=mode=='story'?'visible':'none';['route','route-halo','branch'].forEach(l=>map.setLayoutProperty(l,'visibility',v))}
+
+function render(){
+ const t=tOf(p),inGap=t>G0&&t<G1,c=chapterAt(t),a0=activeAt(t),a=items[a0].c==c?a0:-1,ci=a>=0?a:items.findIndex(x=>x.c==c);
+ if(map){
+  const key=mode=='points'?'overview':(t>G0?4:c);
+  if(key!==camKey){if(camKey===null)moveCamera(key,true);else if(follow||mode=='points')moveCamera(key);else camKey=key}
+  mkEls.forEach((el,i)=>{const on=t>=items[i].t,age=t-items[i].t,cl=el.classList,live=on&&age<34&&i!==a;
+   cl.toggle('hid',!on);cl.toggle('active',i===a&&on);cl.toggle('live',live||(i===a&&on));cl.toggle('past',on&&!live&&i!==a)});
+  if(ready){
+   const f=frontAt(t);
+   if(Math.abs(f-lastF)>.0015||(f===1&&lastF!==1)||(f===0&&lastF!==0)){lastF=f;const pts=along(Math.max(f,.0005));map.getSource('route').setData(line(pts));frontMk.setLngLat(pts[pts.length-1])}
+   const b=t>=875;if(b!==branchOn){branchOn=b;map.setPaintProperty('branch','line-opacity',b?1:0)}
+  }
+  frontMk.getElement().style.opacity=t>=690?1:0;
+ }
+ ticks.forEach((tk,i)=>tk.classList.toggle('done',t>=items[i].t));
+ $('#dusk').style.opacity=mode=='points'?0:clamp((t-1060)/110)*.2;
+ $('#clock').textContent=fmt(t);$('#tod').textContent=todOf(t);$('#skip').classList.toggle('on',inGap&&mode=='story');
+ head.style.left=p*100+'%';
+ chs.forEach((el,i)=>{const h=chapters[i],q=clamp((t-h.s)/(h.e-h.s));el.querySelector('i').style.setProperty('--f',q*100+'%');el.classList.toggle('cur',i===c)});
+ $('#nowT').textContent=chapters[c].t;$('#nowS').textContent=`Chapter ${c+1} of ${chapters.length} · ${fmt(t)}`;
+ track.setAttribute('aria-valuenow',Math.round(p*100));track.setAttribute('aria-valuetext',`${fmt(t)}, ${chapters[c].t}`);
+ const key=ci+':'+c;if(key!==activeKey){activeKey=key;renderCard(ci,c)}
+}
+let last=performance.now();
+function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;
+ if(playing){p+=dt*speeds[si]/DUR;if(p>=1){p=1;setPlaying(false)}}
+ render();requestAnimationFrame(loop)}
+
+function setMode(m,auto){mode=m;mock.classList.toggle('points',m=='points');mock.classList.remove('hl');
+ $('#mPoints').setAttribute('aria-pressed',m=='points');$('#mStory').setAttribute('aria-pressed',m=='story');
+ $('#ttl').textContent=m=='points'?'Media Map':'March over the Brooklyn Bridge';
+ $('#sub').textContent=m=='points'?'41 points in this area · Click one to see its details':STORY_SUB;
+ closeDetail();
+ setPlaying(false);setFollow(true);camKey=map?(camKey===null?null:'switch'):camKey;syncLayers();
+ if(auto){p=0;setPlaying(true)}}
+$('#mPoints').onclick=()=>setMode('points');
+$('#mStory').onclick=()=>setMode('story');
+$('#start').onclick=()=>setMode('story',true);
+$('#follow').onclick=()=>{setFollow(true);const t=tOf(p);moveCamera(t>G0?4:chapterAt(t))};
+const entry=document.querySelector('.entry');entry.onmouseenter=()=>mock.classList.add('hl');entry.onmouseleave=()=>mock.classList.remove('hl');
+
+playBtn.onclick=()=>{if(!playing&&p>=1)p=0;setPlaying(!playing)};
+$('#spd').onclick=()=>{si=(si+1)%speeds.length;$('#spd').textContent=speeds[si]+'×'};
+$('#next').onclick=()=>{const c=chapterAt(tOf(p));p=c<chapters.length-1?xOf(chapters[c+1].s):1};
+$('#prev').onclick=()=>{const t=tOf(p),c=chapterAt(t);p=xOf(chapters[t-chapters[c].s>6||c==0?c:c-1].s)};
+
+/* Scrubbing */
+const pAt=e=>{const r=track.getBoundingClientRect();return clamp((e.clientX-r.left)/r.width)};
+let drag=false,resume=false;
+track.addEventListener('pointerdown',e=>{drag=true;scrubbing=true;resume=playing;setPlaying(false);track.setPointerCapture(e.pointerId);p=pAt(e)});
+track.addEventListener('pointermove',e=>{const q=pAt(e);if(drag)p=q;
+ const t=tOf(q);let near=-1,best=.013;items.forEach((it,i)=>{const d=Math.abs(xOf(it.t)-q);if(d<best){best=d;near=i}});
+ const inG=t>G0&&t<G1;
+ tip.innerHTML=near>=0?`<b>${items[near].approx?'≈ Afternoon':fmt(items[near].t)}</b> · ${items[near].cap}`:inG?'<b>2 hours</b> with no uploads, skipped':`<b>${fmt(t)}</b>`;
+ const w=tip.offsetWidth||120,W=track.clientWidth;tip.style.left=clamp(q*W,w/2,W-w/2)+'px';tip.style.display='block'});
+track.addEventListener('pointerup',e=>{drag=false;scrubbing=false;const b=e.target.closest('.tick');if(b)jumpTo(+b.dataset.i);if(resume&&!b)setPlaying(true)});
+track.addEventListener('pointerleave',()=>tip.style.display='none');
+track.addEventListener('keydown',e=>{if(e.key=='ArrowRight'){p=clamp(p+.01);e.preventDefault()}if(e.key=='ArrowLeft'){p=clamp(p-.01);e.preventDefault()}});
+document.addEventListener('keydown',e=>{if(e.code=='Space'&&mode=='story'&&!e.target.closest('button')){e.preventDefault();playBtn.click()}
+ if(mode=='points'&&selected!==null){if(e.key=='Escape')closeDetail();if(e.key=='ArrowRight')selectPoint((selected+1)%allPoints.length);if(e.key=='ArrowLeft')selectPoint((selected-1+allPoints.length)%allPoints.length)}});
+
+/* Deep links: #points, #p=0.5 */
+const h=location.hash;const q=/#p=([\d.]+)/.exec(h);if(q)p=clamp(+q[1]);
+setPlaying(false);initMap();if(h=='#points')setMode('points');
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

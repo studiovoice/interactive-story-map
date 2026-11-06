@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VOICE story playback mock</title>
+<style>
+/* Zero-specificity fallbacks (the app's light palette) so this also works opened as a plain file. */
+:where(:root){--background:oklch(1 0 0);--foreground:oklch(.141 .005 285.8);--muted:oklch(.967 .001 286.4);--muted-foreground:oklch(.552 .016 285.9);--card:oklch(1 0 0);--popover:oklch(1 0 0);--popover-foreground:oklch(.141 .005 285.8);--secondary:oklch(.967 .001 286.4);--secondary-foreground:oklch(.21 .006 285.9);--border:oklch(.92 .004 286.3);--ring:oklch(.705 .015 286);--primary:oklch(.21 .006 285.9);--primary-foreground:oklch(.985 0 0);--info:oklch(.62 .13 240);--success:oklch(.62 .15 150);--warning:oklch(.72 .16 70);--radius:.625rem;--font-sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;--font-mono:ui-monospace,Menlo,monospace}
+:where(body){color:var(--foreground);font-family:var(--font-sans)}
+*{box-sizing:border-box}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+button:focus-visible,[role=slider]:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+.mock{--land:color-mix(in oklab,var(--muted) 72%,var(--background));--street:color-mix(in oklab,var(--foreground) 7%,var(--land));--major:color-mix(in oklab,var(--foreground) 14%,var(--land));--water:color-mix(in oklab,var(--info) 26%,var(--land));--park:color-mix(in oklab,var(--success) 20%,var(--land));--plaza:color-mix(in oklab,var(--warning) 18%,var(--land));max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:10px;font-size:13px;line-height:1.4}
+
+/* Header */
+.hd{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.hd .ti{flex:1;min-width:200px}
+.hd h1{margin:0;font-size:17px;font-weight:600;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
+.hd p{margin:1px 0 0;color:var(--muted-foreground);font-size:12.5px}
+.chip{font-size:10.5px;font-weight:500;color:var(--muted-foreground);border:1px solid var(--border);border-radius:99px;padding:1px 7px;white-space:nowrap}
+.seg{display:flex;padding:3px;gap:2px;background:var(--muted);border-radius:var(--radius)}
+.seg button{padding:5px 11px;border-radius:calc(var(--radius) - 3px);font-size:12.5px;font-weight:500;color:var(--muted-foreground)}
+.seg button[aria-pressed=true]{background:var(--background);color:var(--foreground);box-shadow:0 1px 2px #0002}
+
+/* Stage */
+.stage{position:relative}
+.map{position:relative;height:440px;border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);background:var(--land)}
+.map svg{display:block;width:100%;height:100%;touch-action:manipulation}
+.lbl{font-size:15px;fill:var(--muted-foreground);text-anchor:middle;font-weight:500;letter-spacing:.02em;paint-order:stroke;stroke:var(--land);stroke-width:3px}
+.lbl.w{font-style:italic;stroke:none;opacity:.8}
+.mk{cursor:pointer}
+.mk .body{fill:var(--primary);stroke:var(--background);stroke-width:2}
+.mk .tri{fill:var(--primary-foreground);pointer-events:none}
+.mk .pulse{fill:none;stroke:var(--primary);stroke-width:1.5;opacity:0}
+.mk .tm{font-size:11px;font-weight:600;text-anchor:middle;fill:var(--foreground);paint-order:stroke;stroke:var(--background);stroke-width:3.5px;stroke-linejoin:round;display:none;pointer-events:none}
+.mk.past{opacity:.72}.mk.past .body{transform:scale(.62)}.mk.past .tri{display:none}
+.mk.live{opacity:1}.mk.live .tm{display:block}.mk.live .pulse{animation:pu 1.8s ease-out infinite}
+.mk.active .body{transform:scale(1.28)}.mk.active .tri{transform:scale(1.28)}.mk.active .tm{display:block}
+.mk.approx .body{fill:var(--background);stroke:var(--primary);stroke-width:2;stroke-dasharray:3 2.4}
+.mk.hid{display:none}
+@keyframes pu{0%{transform:scale(.8);opacity:.75}100%{transform:scale(2.5);opacity:0}}
+.xtra{display:none}
+.points .xtra{display:block}
+.points .mk{opacity:1}.points .mk.hid{display:block}
+.points .mk .body,.xtra circle{fill:color-mix(in oklab,var(--background) 80%,transparent);stroke:var(--foreground);stroke-width:1.4;stroke-dasharray:none;transform:none}
+.points .mk .tri,.points .mk .tm,.points .mk .pulse,.points .story-only{display:none}
+.points.hl .mk .body{fill:var(--primary);stroke:var(--background);stroke-width:2}
+.points.hl .xtra{opacity:.35}
+.story-only,.points-only{transition:opacity .2s}
+.points-only{display:none}
+.points .points-only{display:flex}
+.points .tl,.points .card{display:none}
+
+/* Map overlays */
+.ov{position:absolute;z-index:2;background:color-mix(in oklab,var(--popover) 92%,transparent);backdrop-filter:blur(6px);border:1px solid var(--border);border-radius:var(--radius);color:var(--popover-foreground)}
+.clock{top:12px;left:12px;padding:7px 11px}
+.clock small{display:block;font-size:11px;color:var(--muted-foreground)}
+.clock b{display:block;font-size:21px;font-weight:600;line-height:1.15;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.leg{left:12px;bottom:12px;padding:5px 9px;display:flex;gap:11px;font-size:11px;color:var(--muted-foreground);align-items:center}
+.leg span{display:flex;align-items:center;gap:4px}
+.leg i{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--primary)}
+.leg i.v{border-radius:0;background:none;width:0;height:0;border-left:9px solid var(--primary);border-top:5px solid transparent;border-bottom:5px solid transparent}
+.leg i.a{background:none;border:1.5px dashed var(--primary)}
+.leg i.r{border-radius:2px;height:3px;width:14px}
+.skip{left:0;right:0;top:14px;margin:auto;width:max-content;padding:4px 11px;font-size:12px;font-weight:500;opacity:0;pointer-events:none;transition:opacity .15s}
+.skip.on{opacity:1}
+.search{left:0;right:0;top:12px;margin:auto;width:max-content;padding:5px 13px;font-size:12px;font-weight:500;border-radius:99px;display:none}
+.points .search{display:block}
+
+/* Story card */
+.card{position:absolute;z-index:3;top:12px;right:12px;bottom:12px;width:250px;padding:12px;background:var(--popover);color:var(--popover-foreground);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 6px 20px #0002;display:flex;flex-direction:column;gap:8px;overflow:hidden}
+.kick{display:flex;justify-content:space-between;font-size:11px;color:var(--muted-foreground);font-weight:500}
+.card h2{margin:-5px 0 0;font-size:15px;font-weight:600;letter-spacing:-.01em;line-height:1.25}
+.narr{margin:-3px 0 0;font-size:12.5px;color:var(--muted-foreground)}
+.scene{position:relative;background-size:cover;overflow:hidden;display:block}
+.scene svg{position:absolute;inset:0;width:100%;height:100%}
+.media{aspect-ratio:16/9;width:100%;border-radius:calc(var(--radius) - 3px);flex:none}
+.badge{position:absolute;left:6px;bottom:6px;font-size:10.5px;font-weight:500;color:#fff;background:#000a;padding:1px 6px;border-radius:99px;display:flex;align-items:center;gap:4px}
+.bigplay{position:absolute;inset:0;margin:auto;width:34px;height:34px;border-radius:50%;background:#000a;display:grid;place-items:center}
+.cap{font-size:12.5px;font-weight:500;line-height:1.3}
+.meta{font-size:11px;color:var(--muted-foreground);margin-top:2px}
+.also{font-size:11.5px;padding:4px 8px;border-radius:calc(var(--radius) - 4px);background:var(--muted);color:var(--foreground);text-align:left;line-height:1.3}
+.also b{font-weight:600}
+.strip{display:flex;gap:4px;margin-top:auto;padding-top:2px}
+.strip button{width:44px;height:32px;border-radius:5px;overflow:hidden;opacity:.6;outline-offset:1px;flex:none}
+.strip button.on{opacity:1;outline:2px solid var(--primary)}
+.strip button:hover{opacity:1}
+
+/* Timeline */
+.tl{position:relative;display:flex;flex-direction:column;gap:6px}
+.track{position:relative;height:74px;margin:0 7px;cursor:pointer;touch-action:none;user-select:none}
+.ch{position:absolute;top:0;height:26px;padding-right:3px}
+.ch span{display:block;font-size:11.5px;font-weight:500;color:var(--muted-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;height:17px}
+.ch.cur span{color:var(--foreground);font-weight:600}
+.ch em{display:none;font-style:normal}
+.ch i{position:absolute;left:0;right:3px;top:18px;height:6px;border-radius:3px;background:var(--muted);overflow:hidden}
+.ch i::after{content:"";position:absolute;inset:0;width:var(--f,0%);background:var(--primary)}
+.gap{position:absolute;top:18px;height:6px;border-radius:3px;background:repeating-linear-gradient(115deg,var(--border) 0 2px,transparent 2px 4px)}
+.tick{position:absolute;top:32px;width:14px;height:16px;margin-left:-7px;display:grid;place-items:center}
+.tick i{display:block;width:8px;height:8px;border-radius:50%;background:var(--border);transition:transform .12s}
+.tick.v i{border-radius:0;background:none;width:0;height:0;border-left:9px solid var(--border);border-top:5px solid transparent;border-bottom:5px solid transparent}
+.tick.a i{background:none;border:1.5px dashed var(--muted-foreground)}
+.tick.done i{background:var(--primary)}
+.tick.v.done i{background:none;border-left-color:var(--primary)}
+.tick.a.done i{background:none;border-color:var(--primary)}
+.tick:hover i{transform:scale(1.35)}
+.band{position:absolute;top:50px;height:4px;border-radius:2px;background:linear-gradient(90deg,transparent,color-mix(in oklab,var(--muted-foreground) 45%,transparent) 15% 85%,transparent)}
+.hr{position:absolute;top:58px;font-size:10.5px;color:var(--muted-foreground);transform:translateX(-50%);white-space:nowrap;font-variant-numeric:tabular-nums}
+.head{position:absolute;top:13px;bottom:18px;width:2px;margin-left:-1px;background:var(--foreground);border-radius:1px;pointer-events:none}
+.head::before{content:"";position:absolute;left:-5px;top:-1px;width:12px;height:12px;border-radius:50%;background:var(--foreground);border:2px solid var(--background)}
+.tip{position:absolute;bottom:calc(100% + 4px);transform:translateX(-50%);max-width:220px;width:max-content;padding:5px 9px;font-size:11.5px;line-height:1.3;background:var(--popover);color:var(--popover-foreground);border:1px solid var(--border);border-radius:calc(var(--radius) - 3px);box-shadow:0 3px 12px #0003;pointer-events:none;display:none;z-index:6}
+.tip b{font-weight:600;font-variant-numeric:tabular-nums}
+.ctl{display:flex;align-items:center;gap:6px}
+.ic{width:32px;height:32px;display:grid;place-items:center;border-radius:50%;color:var(--foreground)}
+.ic:hover{background:var(--muted)}
+.play{width:42px;height:42px;display:grid;place-items:center;border-radius:50%;background:var(--primary);color:var(--primary-foreground);flex:none;transition:transform .1s}
+.play:hover{transform:scale(1.05)}
+.ctl .now{margin-left:8px;min-width:0;flex:1}
+.ctl .now b{display:block;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ctl .now span{display:block;font-size:11.5px;color:var(--muted-foreground);white-space:nowrap}
+.spd{padding:4px 9px;font-size:12px;font-weight:600;border:1px solid var(--border);border-radius:99px;font-variant-numeric:tabular-nums;min-width:40px}
+.spd:hover{background:var(--muted)}
+
+/* "Today" bottom bar: the entry point */
+.entry{align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius);min-height:116px}
+.entry .now{flex:1;min-width:0}
+.entry b{display:block;font-size:14px;font-weight:600}
+.entry span{display:block;font-size:12.5px;color:var(--muted-foreground)}
+
+@media (min-width:1000px){.map{height:560px}.card{width:290px}}
+@media (max-width:600px){
+  .stage{display:contents}
+  .map{height:290px;order:1}.tl{order:2}.card{order:3;position:static;width:auto;box-shadow:none}.entry{order:2}
+  .leg{display:none}.clock b{font-size:17px}.clock{padding:5px 9px}
+  .ch span{text-align:left}.ch .t{display:none}.ch em{display:inline}
+  .spd{min-width:36px}
+}
+@media (prefers-reduced-motion:reduce){.mk.live .pulse{animation:none}}
+</style>
+</head>
+<body>
+<div class="mock" id="mock">
+  <div class="hd" style="order:0">
+    <div class="ti">
+      <h1><span id="ttl">March on Harbor St</span> <span class="chip">Sample data</span></h1>
+      <p id="sub">Sat, Mar 14 · 15 uploads from 9 contributors · Story arranged by VOICE</p>
+    </div>
+    <div class="seg" role="group" aria-label="Mock view">
+      <button id="mPoints" aria-pressed="false">Today: points</button>
+      <button id="mStory" aria-pressed="true">Story view</button>
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="map" id="map">
+      <div class="ov clock story-only"><small>Sat, Mar 14</small><b id="clock">3:20 PM</b><small id="tod">Afternoon</small></div>
+      <div class="ov skip" id="skip">Skipping 2 hours with no uploads</div>
+      <div class="ov search">Search this area</div>
+      <div class="ov leg story-only"><span><i></i>Photo</span><span><i class="v"></i>Video</span><span><i class="a"></i>Approx. time</span><span><i class="r"></i>Route</span></div>
+      <svg id="svg" viewBox="0 0 1000 620" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Map of the event as it unfolds"></svg>
+    </div>
+    <aside class="card" id="card" aria-live="polite"></aside>
+  </div>
+
+  <div class="tl" id="tl" style="order:2">
+    <div class="track" id="track" role="slider" tabindex="0" aria-label="Story time" aria-valuemin="0" aria-valuemax="100">
+      <div class="tip" id="tip"></div>
+    </div>
+    <div class="ctl">
+      <button class="ic" id="prev" aria-label="Previous chapter"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2.5h1.8v11H3zM13.5 2.8v10.4L5.8 8z"/></svg></button>
+      <button class="play" id="play" aria-label="Play"></button>
+      <button class="ic" id="next" aria-label="Next chapter"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M11.2 2.5H13v11h-1.8zM2.5 2.8v10.4L10.2 8z"/></svg></button>
+      <div class="now"><b id="nowT"></b><span id="nowS"></span></div>
+      <button class="spd" id="spd" aria-label="Playback speed">1×</button>
+    </div>
+  </div>
+
+  <div class="entry points-only" style="order:2">
+    <button class="play" id="start" aria-label="Play this story"><svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.2v11.6L13.5 8z"/></svg></button>
+    <div class="now"><b>Play this story: March on Harbor St</b><span>15 of the points in this area belong to one event on Sat, Mar 14. Press play to see them unfold.</span></div>
+  </div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s),mock=$('#mock'),svg=$('#svg'),map=$('#map'),track=$('#track');
+const fmt=m=>{m=Math.round(m);let h=Math.floor(m/60),n=m%60,a=h>=12?'PM':'AM';h=h%12||12;return `${h}:${String(n).padStart(2,'0')} ${a}`};
+const clamp=(v,a=0,b=1)=>Math.min(b,Math.max(a,v));
+
+/* Time axis: real minutes after midnight, with the empty 4:30-6:30 PM stretch compressed. */
+const T0=600,G0=990,G1=1110,T1=1230,GW=.04,K=(1-GW)/510,A=(G0-T0)*K;
+const xOf=t=>t<=G0?(t-T0)*K:t<=G1?A+(t-G0)/(G1-G0)*GW:A+GW+(t-G1)*K;
+const tOf=p=>p<=A?T0+p/K:p<=A+GW?G0+(p-A)/GW*(G1-G0):G1+(p-A-GW)/K;
+
+const chapters=[
+ {s:600,e:690,t:'Gathering',n:'People start arriving at Riverside Park around 10 AM. By late morning the east lawn is full.',cam:[190,425,2.1]},
+ {s:690,e:785,t:'The march sets off',n:'The front of the march leaves the park gates and heads east along Harbor St.',cam:[330,365,1.6]},
+ {s:785,e:855,t:'Lantern Bridge',n:'The march fills both lanes as it crosses the river toward the city center.',cam:[500,305,2]},
+ {s:855,e:990,t:'Stopped at Union Ave',n:'Barriers halt the march. At about the same time, a second group turns down Mill Rd.',cam:[635,315,1.75]},
+ {s:1110,e:1230,t:'Vigil at Civic Plaza',n:'After a quiet stretch, people return to the plaza at dusk for a candlelight vigil.',cam:[745,100,2.1]}];
+const items=[
+ {t:605,x:185,y:425,k:'p',c:0,cap:'First groups arrive at the park gates',pl:'Riverside Park'},
+ {t:640,x:163,y:448,k:'v',d:'0:18',c:0,cap:'Volunteers hand out water and signs',pl:'Riverside Park'},
+ {t:672,x:208,y:405,k:'p',c:0,cap:'The crowd fills the east lawn',pl:'Riverside Park'},
+ {t:698,x:252,y:401,k:'v',d:'0:32',c:1,cap:'The front of the march leaves the park',pl:'Harbor St'},
+ {t:730,x:325,y:369,k:'p',c:1,cap:'Looking back along Harbor St from a rooftop',pl:'Harbor St'},
+ {t:764,x:408,y:333,k:'p',c:1,cap:'Shop owners watch from their doorways',pl:'Harbor St'},
+ {t:788,x:470,y:310,k:'v',d:'0:41',c:2,cap:'The march reaches Lantern Bridge',pl:'Lantern Bridge'},
+ {t:822,x:525,y:296,k:'p',c:2,cap:'Both lanes full at mid-span',pl:'Lantern Bridge'},
+ {t:862,x:638,y:252,k:'v',d:'0:27',c:3,cap:'Barriers block Union Ave',pl:'Union Ave'},
+ {t:895,x:642,y:391,k:'p',c:3,cap:'A second group turns back on Mill Rd',pl:'Mill Rd',also:'<b>Same hour, different place.</b> The main group is still at the barrier on Union Ave.',jump:10},
+ {t:912,x:658,y:238,k:'v',d:'0:24',c:3,cap:'Chanting at the barrier',pl:'Union Ave',also:'<b>Meanwhile, 17 min earlier:</b> a second group on Mill Rd.',jump:9},
+ {t:940,x:598,y:222,k:'p',approx:1,c:3,cap:'Signs left along the railing',pl:'Union Ave'},
+ {t:1128,x:713,y:108,k:'p',c:4,cap:'People return to the plaza at dusk',pl:'Civic Plaza'},
+ {t:1170,x:755,y:92,k:'v',d:'0:52',c:4,cap:'Candles along the plaza steps',pl:'Civic Plaza'},
+ {t:1212,x:782,y:80,k:'p',c:4,cap:'The last of the crowd heads home',pl:'Civic Plaza'}];
+const FRONT=[[690,0],[785,.483],[855,.637],[990,.637],[1110,.96],[1128,1]];
+const frontAt=t=>{if(t<=FRONT[0][0])return 0;for(let i=1;i<FRONT.length;i++)if(t<=FRONT[i][0]){const[a,b]=FRONT[i-1],[c,d]=FRONT[i];return b+(d-b)*(t-a)/(c-a)}return 1};
+const todOf=t=>t<720?'Morning':t<1080?'Afternoon':t<1170?'Evening':'Night';
+
+/* Static map */
+let grid='';
+for(let y=-900;y<1500;y+=62)grid+=`<path d="M-1200 ${y}H2200"/>`;
+for(let x=-1200;x<2200;x+=88)grid+=`<path d="M${x} -900V1500"/>`;
+const rng=(s=>()=>(s=(s*16807)%2147483647)/2147483647)(4242);
+let xtra='';
+for(let i=0;i<26;){const x=50+rng()*900,y=35+rng()*550,rx=500-(y-300)*.05;if(Math.abs(x-rx)<55)continue;xtra+=`<circle class="xd" cx="${x|0}" cy="${y|0}" r="7.5"/>`;i++}
+const labels=[['Harbor St',348,384,-23.4],['Union Ave',772,214,-23.4],['Mill Rd',682,452,66.6],['Lantern Bridge',498,336,-14],['Riverside Park',172,500,-23.4],['Civic Plaza',752,142,-23.4],['River',470,520,84,'w']];
+svg.innerHTML=`<rect x="-1500" y="-1500" width="4000" height="4000" fill="var(--land)"/>
+<g id="world">
+ <g transform="rotate(-23.4 500 300)" stroke="var(--street)" stroke-width="1.6" fill="none">${grid}</g>
+ <rect x="85" y="372" width="180" height="136" rx="14" transform="rotate(-23.4 175 440)" fill="var(--park)"/>
+ <rect x="705" y="58" width="96" height="68" rx="5" transform="rotate(-23.4 753 92)" fill="var(--plaza)"/>
+ <g fill="none" stroke="var(--major)" stroke-width="5" stroke-linecap="round">
+  <path d="M-200 595L450 315"/><path d="M550 290L1300 -34"/><path d="M590 272L800 758"/><path d="M650 247L610 155"/><path d="M610 155L1300 -143"/>
+ </g>
+ <path d="M560 -900C520 -200 470 100 500 300C525 470 440 640 520 1500" fill="none" stroke="var(--water)" stroke-width="74"/>
+ <path d="M450 315L550 290" stroke="var(--major)" stroke-width="8" fill="none"/>
+ <g id="labels">${labels.map(l=>`<text class="lbl ${l[4]||''}" data-p="${l[1]},${l[2]},${l[3]}">${l[0]}</text>`).join('')}</g>
+ <g class="story-only" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path id="halo" d="M230 410L450 315L550 290L650 247L610 155L755 92" stroke="var(--background)" opacity=".8"/>
+  <path id="route" d="M230 410L450 315L550 290L650 247L610 155L755 92" stroke="var(--primary)"/>
+  <path id="branch" d="M590 272L642 391" stroke="var(--primary)" stroke-dasharray="1 7"/>
+ </g>
+ <g class="xtra" id="xtra">${xtra}</g>
+ <g id="mks">${items.map((it,i)=>`<g class="mk ${it.approx?'approx':''}" data-i="${i}"><circle class="pulse" r="8"/><circle class="body" r="7.5"/>${it.k=='v'?'<path class="tri" d="M-2.6 -3.8L4 0L-2.6 3.8Z"/>':''}<text class="tm" y="-14">${it.approx?'≈ afternoon':fmt(it.t)}</text></g>`).join('')}</g>
+ <g id="front" class="story-only"><circle r="4" fill="var(--primary)"/></g>
+</g>
+<rect id="dusk" x="-1500" y="-1500" width="4000" height="4000" fill="#0a1430" opacity="0" pointer-events="none"/>`;
+
+const world=$('#world'),route=$('#route'),halo=$('#halo'),branch=$('#branch'),front=$('#front'),dusk=$('#dusk');
+const L=route.getTotalLength(),mks=[...document.querySelectorAll('.mk')],xds=[...document.querySelectorAll('.xd')],lbls=[...document.querySelectorAll('.lbl')];
+
+/* Placeholder "photos": generated silhouettes tinted by time of day. */
+function scene(it,i){
+ const sky={Morning:'#bcd7ea,#f3ead7',Afternoon:'#8fbfe3,#e3edf1',Evening:'#3a3f73,#e08d62',Night:'#0f1a3a,#2c3460'}[todOf(it.t)];
+ const r=(s=>()=>(s=(s*16807)%2147483647)/2147483647)(i*97+13);
+ let b='',c='';
+ for(let x=-5;x<165;){const w=14+r()*22,h=18+r()*38;b+=`<rect x="${x|0}" y="${70-h|0}" width="${w|0}" height="${h+30|0}"/>`;x+=w+1}
+ for(let k=0;k<24;k++){const x=r()*165,y=70+r()*22,s=2.4+(y-70)*.1;c+=`<circle cx="${x|0}" cy="${y-s*1.5|0}" r="${s.toFixed(1)}"/><rect x="${x-s*1.2|0}" y="${y-s*.6|0}" width="${s*2.4|0}" height="${s*6|0}" rx="${s|0}"/>`}
+ const glow=it.c==4&&it.t>1140?Array.from({length:14},()=>`<circle cx="${r()*160|0}" cy="${74+r()*20|0}" r="1.2" fill="#ffd27a"/>`).join(''):'';
+ const sign=it.c<4?`<rect x="${30+r()*80|0}" y="${44+r()*8|0}" width="26" height="13" fill="#f5f5f0"/>`:'';
+ return `<span class="scene" style="width:100%;height:100%;background-image:linear-gradient(${sky})"><svg viewBox="0 0 160 100" preserveAspectRatio="xMidYMax slice" aria-hidden="true"><g fill="#0003">${b}</g>${sign}<g fill="#141c2ccc">${c}</g>${glow}</svg></span>`}
+
+/* Timeline */
+let th='';
+chapters.forEach((c,i)=>{const a=xOf(c.s),b=xOf(c.e);th+=`<div class="ch" data-c="${i}" style="left:${a*100}%;width:${(b-a)*100}%"><span><em>${i+1}</em><span class="t">${c.t}</span></span><i></i></div>`});
+th+=`<div class="gap" style="left:${A*100}%;width:${GW*100}%"></div>`;
+th+=`<div class="band" style="left:${xOf(720)*100}%;width:${(xOf(1020)-xOf(720))*100}%"></div>`;
+[[600,'10 AM'],[720,'12 PM'],[840,'2 PM'],[960,'4 PM'],[1140,'7 PM'],[1200,'8 PM']].forEach(([t,l])=>th+=`<div class="hr" style="left:${xOf(t)*100}%${t==600?';transform:none':''}">${l}</div>`);
+items.forEach((it,i)=>th+=`<button class="tick ${it.k}${it.approx?' a':''}" data-i="${i}" style="left:${xOf(it.t)*100}%" aria-label="${it.approx?'About':fmt(it.t)}: ${it.cap}"><i></i></button>`);
+th+=`<div class="head" id="head"></div>`;
+track.insertAdjacentHTML('beforeend',th);
+const ticks=[...document.querySelectorAll('.tick')],chs=[...document.querySelectorAll('.ch')],head=$('#head'),tip=$('#tip');
+
+/* State */
+const startP=xOf(920);
+let p=startP,playing=false,mode='story',speeds=[1,2,4],si=0,activeKey=null;
+const cam={x:0,y:0,z:1};let snap=true;
+const DUR=48,reduced=matchMedia('(prefers-reduced-motion:reduce)').matches,narrow=matchMedia('(max-width:600px)');
+const PLAY='<svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.2v11.6L13.5 8z"/></svg>',PAUSE='<svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M3.5 2.5h3.2v11H3.5zM9.3 2.5h3.2v11H9.3z"/></svg>';
+const playBtn=$('#play');
+function setPlaying(v){playing=v;playBtn.innerHTML=v?PAUSE:PLAY;playBtn.setAttribute('aria-label',v?'Pause':'Play')}
+const chapterAt=t=>{let c=0;chapters.forEach((h,i)=>{if(t>=h.s)c=i});return c};
+const activeAt=t=>{let a=0;items.forEach((it,i)=>{if(t>=it.t)a=i});return a};
+const jumpTo=i=>{p=clamp(xOf(items[i].t)+1e-4);};
+
+function renderCard(a,c){
+ const it=items[a],h=chapters[c],vid=it.k=='v';
+ const when=it.approx?'≈ Afternoon · no exact time recorded':fmt(it.t);
+ const inCh=items.map((x,i)=>[x,i]).filter(([x])=>x.c==c);
+ $('#card').innerHTML=`<div class="kick"><span>Chapter ${c+1} of ${chapters.length}</span><span>${a+1} / ${items.length}</span></div>
+ <h2>${h.t}</h2><p class="narr">${h.n}</p>
+ <div class="media scene" style="border-radius:calc(var(--radius) - 3px)">${scene(it,a)}${vid?`<span class="bigplay">${PLAY.replace('fill="currentColor"','fill="#fff"')}</span>`:''}<span class="badge">${vid?'Video · '+it.d:'Photo'}</span></div>
+ <div><div class="cap">${it.cap}</div><div class="meta">${when} · ${it.pl} · Anonymous contributor</div></div>
+ ${it.also?`<button class="also" data-j="${it.jump}">${it.also}</button>`:''}
+ <div class="strip">${inCh.map(([x,i])=>`<button class="${i==a?'on':''}" data-j="${i}" aria-label="${x.cap}">${scene(x,i)}</button>`).join('')}</div>`;
+}
+$('#card').addEventListener('click',e=>{const b=e.target.closest('[data-j]');if(b){jumpTo(+b.dataset.j);setPlaying(false)}});
+
+function focus(){const W=map.clientWidth,H=map.clientHeight,s=Math.max(W/1000,H/620);
+ const sx=mode=='story'&&!narrow.matches?(W-$('#card').offsetWidth-24)/2:W/2;
+ return{fx:500+(sx-W/2)/s,fy:310,u:1/s}}
+
+function render(dt){
+ const t=tOf(p),inGap=t>G0&&t<G1,c=chapterAt(t),a0=activeAt(t),a=items[a0].c==c?a0:-1,ci=a>=0?a:items.findIndex(x=>x.c==c);
+ const tgt=mode=='points'?[500,310,1]:(t>G0?chapters[4].cam:chapters[c].cam);
+ const k=snap||reduced?1:1-Math.exp(-dt*2.4);snap=false;
+ cam.x+=(tgt[0]-cam.x)*k;cam.y+=(tgt[1]-cam.y)*k;cam.z+=(tgt[2]-cam.z)*k;
+ const{fx,fy,u}=focus(),z=cam.z,inv=1/z;
+ world.setAttribute('transform',`translate(${fx-cam.x*z} ${fy-cam.y*z}) scale(${z})`);
+ lbls.forEach(l=>{const[x,y,r]=l.dataset.p.split(',');l.setAttribute('transform',`translate(${x} ${y}) rotate(${r}) scale(${inv*u*.71})`)});
+ const ms=inv*u*.71*1.5;
+ mks.forEach((m,i)=>{const it=items[i],age=t-it.t,on=age>=0,cl=m.classList;
+  const pop=mode=='points'?1:clamp(age/5,.01,1);
+  m.setAttribute('transform',`translate(${it.x} ${it.y}) scale(${ms*(mode=='points'?.72:pop)})`);
+  cl.toggle('hid',!on);
+  const live=on&&age<34&&i!==a;cl.toggle('active',i===a&&on);cl.toggle('live',live||(i===a&&on));cl.toggle('past',on&&!live&&i!==a);
+  ticks[i].classList.toggle('done',on)});
+ xds.forEach(d=>d.setAttribute('transform',`translate(${d.cx.baseVal.value} ${d.cy.baseVal.value}) scale(${ms*.72}) translate(${-d.cx.baseVal.value} ${-d.cy.baseVal.value})`));
+ const f=frontAt(t),sw=3.2*inv*u*.71*1.3;
+ route.setAttribute('stroke-dasharray',`${f*L} ${L}`);route.setAttribute('stroke-width',sw);
+ halo.setAttribute('stroke-dasharray',`${f*L} ${L}`);halo.setAttribute('stroke-width',sw*2.2);
+ branch.setAttribute('opacity',clamp((t-875)/15));branch.setAttribute('stroke-width',sw);branch.setAttribute('stroke-dasharray',`${.2*inv} ${6*inv*u*1.6}`);
+ const pt=route.getPointAtLength(f*L);
+ front.setAttribute('transform',`translate(${pt.x} ${pt.y}) scale(${ms})`);front.style.opacity=t>=690?1:0;
+ dusk.setAttribute('opacity',mode=='points'?0:clamp((t-1060)/110)*.2);
+ $('#clock').textContent=fmt(t);$('#tod').textContent=todOf(t);$('#skip').classList.toggle('on',inGap&&mode=='story');
+ head.style.left=p*100+'%';
+ chs.forEach((el,i)=>{const h=chapters[i],q=clamp((t-h.s)/(h.e-h.s));el.querySelector('i').style.setProperty('--f',q*100+'%');el.classList.toggle('cur',i===c)});
+ $('#nowT').textContent=chapters[c].t;$('#nowS').textContent=`Chapter ${c+1} of ${chapters.length} · ${fmt(t)}`;
+ track.setAttribute('aria-valuenow',Math.round(p*100));track.setAttribute('aria-valuetext',`${fmt(t)}, ${chapters[c].t}`);
+ const key=ci+':'+c;if(key!==activeKey){activeKey=key;renderCard(ci,c)}
+}
+let last=performance.now();
+function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;
+ if(playing){p+=dt*speeds[si]/DUR;if(p>=1){p=1;setPlaying(false)}}
+ render(dt);requestAnimationFrame(loop)}
+
+function setMode(m,auto){mode=m;mock.classList.toggle('points',m=='points');mock.classList.remove('hl');
+ $('#mPoints').setAttribute('aria-pressed',m=='points');$('#mStory').setAttribute('aria-pressed',m=='story');
+ $('#ttl').textContent=m=='points'?'Media Map':'March on Harbor St';
+ $('#sub').textContent=m=='points'?'41 points in this area':'Sat, Mar 14 · 15 uploads from 9 contributors · Story arranged by VOICE';
+ setPlaying(false);if(auto){p=0;setPlaying(true)}}
+$('#mPoints').onclick=()=>setMode('points');
+$('#mStory').onclick=()=>setMode('story');
+$('#start').onclick=()=>setMode('story',true);
+const entry=document.querySelector('.entry');entry.onmouseenter=()=>mock.classList.add('hl');entry.onmouseleave=()=>mock.classList.remove('hl');
+
+playBtn.onclick=()=>{if(!playing&&p>=1)p=0;setPlaying(!playing)};
+$('#spd').onclick=()=>{si=(si+1)%speeds.length;$('#spd').textContent=speeds[si]+'×'};
+$('#next').onclick=()=>{const c=chapterAt(tOf(p));p=c<chapters.length-1?xOf(chapters[c+1].s):1};
+$('#prev').onclick=()=>{const t=tOf(p),c=chapterAt(t);p=xOf(chapters[t-chapters[c].s>6||c==0?c:c-1].s)};
+
+/* Scrubbing */
+const pAt=e=>{const r=track.getBoundingClientRect();return clamp((e.clientX-r.left)/r.width)};
+let drag=false,resume=false;
+track.addEventListener('pointerdown',e=>{drag=true;resume=playing;setPlaying(false);track.setPointerCapture(e.pointerId);p=pAt(e)});
+track.addEventListener('pointermove',e=>{const q=pAt(e);if(drag)p=q;
+ const t=tOf(q);let near=-1,best=.013;items.forEach((it,i)=>{const d=Math.abs(xOf(it.t)-q);if(d<best){best=d;near=i}});
+ const inG=t>G0&&t<G1;
+ tip.innerHTML=near>=0?`<b>${items[near].approx?'≈ Afternoon':fmt(items[near].t)}</b> · ${items[near].cap}`:inG?'<b>2 hours</b> with no uploads, skipped':`<b>${fmt(t)}</b>`;
+ const w=tip.offsetWidth||120,W=track.clientWidth;tip.style.left=clamp(q*W,w/2,W-w/2)+'px';tip.style.display='block'});
+track.addEventListener('pointerup',e=>{drag=false;const b=e.target.closest('.tick');if(b)jumpTo(+b.dataset.i);if(resume&&!b)setPlaying(true)});
+track.addEventListener('pointerleave',()=>tip.style.display='none');
+track.addEventListener('keydown',e=>{if(e.key=='ArrowRight'){p=clamp(p+.01);e.preventDefault()}if(e.key=='ArrowLeft'){p=clamp(p-.01);e.preventDefault()}});
+document.addEventListener('keydown',e=>{if(e.code=='Space'&&mode=='story'&&!e.target.closest('button')){e.preventDefault();playBtn.click()}});
+svg.addEventListener('click',e=>{const m=e.target.closest('.mk');if(m&&mode=='story'){jumpTo(+m.dataset.i);setPlaying(false)}});
+
+/* Deep links: #points, #p=0.5 */
+const h=location.hash;if(h=='#points')setMode('points');else{const q=/#p=([\d.]+)/.exec(h);if(q)p=clamp(+q[1]);setPlaying(false)}
+new ResizeObserver(()=>{snap=true}).observe(map);
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
