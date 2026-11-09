@@ -1,0 +1,229 @@
+/* Map marker styles, ported from prototype/story-playback-map.html. Plain CSS because
+   MapLibre owns these elements' transforms. Colors come from the app's theme tokens. */
+
+/* ── Story playback marker ── */
+.mk {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.mk .body {
+  display: grid;
+  place-items: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: 2px solid var(--background);
+  box-shadow: 0 1px 3px #0005;
+  animation: mk-pop 0.28s ease-out;
+  transition: transform 0.15s;
+}
+.mk .body svg {
+  width: 7px;
+  height: 8px;
+  fill: var(--primary-foreground);
+  display: none;
+}
+.mk.video .body svg {
+  display: block;
+}
+.mk .pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.5px solid var(--primary);
+  opacity: 0;
+  pointer-events: none;
+}
+.mk .tm {
+  position: absolute;
+  bottom: calc(100% + 3px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  padding: 0 5px;
+  border-radius: 99px;
+  background: color-mix(in oklab, var(--background) 86%, transparent);
+  color: var(--foreground);
+  display: none;
+  pointer-events: none;
+}
+.mk.past {
+  opacity: 0.78;
+}
+.mk.past .body {
+  transform: scale(0.62);
+}
+.mk.past .body svg {
+  display: none;
+}
+.mk.live {
+  opacity: 1;
+  z-index: 2;
+}
+.mk.live .tm {
+  display: block;
+}
+.mk.live .pulse {
+  animation: mk-pulse 1.8s ease-out infinite;
+}
+.mk.active {
+  z-index: 3;
+}
+.mk.active .body {
+  transform: scale(1.25);
+}
+.mk.active .tm {
+  display: block;
+}
+.mk.approx .body {
+  background: var(--background);
+  border: 2px dashed var(--primary);
+}
+.mk.approx .body svg {
+  display: none;
+}
+.mk.hid {
+  display: none;
+}
+.mk:hover .body {
+  transform: scale(1.3);
+}
+
+.mk-front {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--primary);
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+/* ── Generic point marker (explore map, editor, picker) ── */
+.pt {
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.pt .body {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: color-mix(in oklab, var(--background) 82%, transparent);
+  border: 1.5px solid var(--foreground);
+  transition: transform 0.15s;
+}
+.pt .pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.5px solid var(--primary);
+  opacity: 0;
+  pointer-events: none;
+}
+.pt:hover .body {
+  transform: scale(1.3);
+}
+.pt.filled .body {
+  background: var(--primary);
+  border: 2px solid var(--background);
+  box-shadow: 0 1px 3px #0005;
+}
+.pt.faint {
+  opacity: 0.45;
+}
+.pt.faint:hover {
+  opacity: 1;
+}
+.pt.sel {
+  z-index: 4;
+}
+.pt.sel .body {
+  background: var(--primary);
+  border: 2px solid var(--background);
+  transform: scale(1.3);
+  box-shadow: 0 1px 3px #0005;
+}
+.pt.sel .pulse {
+  animation: mk-pulse 1.8s ease-out infinite;
+}
+.pt .num {
+  position: absolute;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--primary-foreground);
+  pointer-events: none;
+}
+.pt.numbered .body {
+  width: 17px;
+  height: 17px;
+}
+.pt.numbered {
+  width: 20px;
+  height: 20px;
+}
+
+/* ── Location picker pin ── */
+.pin {
+  width: 26px;
+  height: 34px;
+  cursor: grab;
+  filter: drop-shadow(0 2px 3px #0005);
+}
+.pin:active {
+  cursor: grabbing;
+}
+
+/* Clear MapLibre chrome off our overlays. */
+.maplibregl-ctrl-group {
+  border-radius: var(--radius) !important;
+}
+
+@keyframes mk-pulse {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.75;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+@keyframes mk-pop {
+  0% {
+    transform: scale(0);
+  }
+  70% {
+    transform: scale(1.25);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mk.live .pulse,
+  .pt.sel .pulse {
+    animation: none;
+  }
+  .mk .body {
+    animation: none;
+  }
+}
+
+/* Approximate / privacy-obscured location: dashed ring instead of a solid dot. */
+.pt.fuzzy .body {
+  border-style: dashed;
+}
+.pt.fuzzy.filled .body,
+.pt.fuzzy.sel .body {
+  background: var(--background);
+  border: 2px dashed var(--primary);
+}
