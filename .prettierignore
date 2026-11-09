@@ -1,0 +1,5 @@
+pnpm-lock.yaml
+data/
+prototype/
+src/components/ui/
+.next/
