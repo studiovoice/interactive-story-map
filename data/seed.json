@@ -1,0 +1,1351 @@
+{
+  "version": 1,
+  "points": [
+    {
+      "id": "pt_seed00001",
+      "title": "First groups arrive at the park entrance",
+      "description": "Taken just after 10 from the southern path. Small groups with hand-painted signs waiting near the entrance.",
+      "kind": "photo",
+      "location": [
+        -73.99045,
+        40.69795
+      ],
+      "locationPrecision": "exact",
+      "locationRadiusM": null,
+      "placeName": "Cadman Plaza Park",
+      "capturedAt": "2026-03-14T10:05",
+      "timePrecision": "exact",
+      "tags": [
+        "gathering",
+        "cadman plaza"
+      ],
+      "contributor": "Anonymous contributor",
+      "media": [],
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    },
+    {
+      "id": "pt_seed00002",
+      "title": "Volunteers hand out water and signs",
+      "description": "Short clip of volunteers at a folding table passing out bottled water and blank signs.",
+      "kind": "video",
+      "location": [
+        -73.99095,
+        40.69825
+      ],
+      "locationPrecision": "approximate",
+      "locationRadiusM": 80,
+      "placeName": "Cadman Plaza Park",
+      "capturedAt": "2026-03-14T10:40",
+      "timePrecision": "exact",
+      "tags": [
+        "gathering",
+        "cadman plaza"
+      ],
+      "contributor": "M. R.",
+      "media": [
+        {
+          "id": "med_seed1v",
+          "kind": "video",
+          "source": "external",
+          "durationSec": 18
+        },
+        {
+          "id": "med_seed1d",
+          "kind": "document",
+          "source": "external",
+          "fileName": "volunteer-flyer.pdf"
+        }
+      ],
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    },
+    {
+      "id": "pt_seed00003",
+      "title": "The crowd fills the central lawn",
+      "description": "Wide shot of the lawn about an hour in. It was hard to find a place to stand by this point.",
+      "kind": "photo",
+      "location": [
+        -73.99025,
+        40.69885
+      ],
+      "locationPrecision": "exact",
+      "locationRadiusM": null,
+      "placeName": "Cadman Plaza Park",
+      "capturedAt": "2026-03-14T11:12",
+      "timePrecision": "exact",
+      "tags": [
+        "gathering",
+        "cadman plaza"
+      ],
+      "contributor": "Anonymous contributor",
+      "media": [],
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    },
+    {
+      "id": "pt_seed00004",
+      "title": "The front of the march leaves the park",
+      "description": "The first rows moving out of the plaza toward the bridge ramp, chanting.",
+      "kind": "video",
+      "location": [
+        -73.98989,
+        40.70007
+      ],
+      "locationPrecision": "exact",
+      "locationRadiusM": null,
+      "placeName": "Cadman Plaza",
+      "capturedAt": "2026-03-14T11:38",
+      "timePrecision": "exact",
+      "tags": [
+        "march",
+        "brooklyn bridge"
+      ],
+      "contributor": "J. Ortiz",
+      "media": [
+        {
+          "id": "med_seed3v",
+          "kind": "video",
+          "source": "external",
+          "durationSec": 32
+        }
+      ],
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    },
+    {
+      "id": "pt_seed00005",
+      "title": "Looking back from the top of the ramp",
+      "description": "Taken from the top of the ramp, looking back at the people still coming up behind us.",
+      "kind": "photo",
+      "location": [
+        -73.99176,
+        40.70204
+      ],
+      "locationPrecision": "exact",
+      "locationRadiusM": null,
+      "placeName": "Brooklyn Bridge approach",
+      "capturedAt": "2026-03-14T12:10",
+      "timePrecision": "exact",
+      "tags": [
+        "march",
+        "brooklyn bridge"
+      ],
+      "contributor": "Anonymous contributor",
+      "media": [],
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    },
+    {
+      "id": "pt_seed00006",
+      "title": "The first banners reach the Brooklyn tower",
+      "description": "Banners held up at the stone tower on the Brooklyn side. The walkway narrows here.",
+      "kind": "photo",
+      "location": [
+        -73.99405,
+        40.70391
+      ],
+      "locationPrecision": "exact",
+      "locationRadiusM": null,
+      "placeName": "Brooklyn Bridge",
+      "capturedAt": "2026-03-14T12:44",
+      "timePrecision": "exact",
+      "tags": [
+        "march",
+        "brooklyn bridge"
+      ],
+      "contributor": "Dee",
+      "media": [],
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    },
+    {
+      "id": "pt_seed00007",
+      "title": "Mid-span, with Manhattan ahead",
+      "description": "Walking clip from the middle of the bridge. You can hear the traffic under the walkway.",
+      "kind": "video",
+      "location": [
+        -73.9983,
+        40.70719
+      ],
+      "locationPrecision": "exact",
+      "locationRadiusM": null,
+      "placeName": "Brooklyn Bridge",
+      "capturedAt": "2026-03-14T13:08",
+      "timePrecision": "exact",
+      "tags": [
+        "march",
+        "brooklyn bridge"
+      ],
+      "contributor": "K. Chen",
+      "media": [
+        {
+          "id": "med_seed6v",
+          "kind": "video",
+          "source": "external",
+          "durationSec": 41
+        }
+      ],
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    },
+    {
+      "id": "pt_seed00008",
+      "title": "The walkway full on the Manhattan side",
+      "description": "Looking ahead on the walkway near the Manhattan side. No gaps in the crowd from here to the end of the bridge.",
+      "kind": "photo",
+      "location": [
+        -74.00259,
+        40.71064
+      ],
+      "locationPrecision": "exact",
+      "locationRadiusM": null,
+      "placeName": "Brooklyn Bridge",
+      "capturedAt": "2026-03-14T13:42",
+      "timePrecision": "exact",
+      "tags": [
+        "march",
+        "brooklyn bridge"
+      ],
+      "contributor": "Anonymous contributor",
+      "media": [],
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    },
+    {
+      "id": "pt_seed00009",
+      "title": "Barriers block the way at Centre St",
+      "description": "Metal barriers across the street at the end of the route. People stopped and bunched up behind them.",
+      "kind": "video",
+      "location": [
+        -74.00372,
+        40.71333
+      ],
+      "locationPrecision": "exact",
+      "locationRadiusM": null,
+      "placeName": "Centre St",
+      "capturedAt": "2026-03-14T14:22",
+      "timePrecision": "exact",
+      "tags": [
+        "barrier",
+        "centre st"
+      ],
+      "contributor": "Sam",
+      "media": [
+        {
+          "id": "med_seed8v",
+          "kind": "video",
+          "source": "external",
+          "durationSec": 27
+        }
+      ],
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    },
+    {
+      "id": "pt_seed00010",
+      "title": "A second group heads west on Chambers St",
+      "description": "A smaller group split off and walked west. I followed them for a few minutes and took this.",
+      "kind": "photo",
+      "location": [
+        -74.00636,
+        40.71387
+      ],
+      "locationPrecision": "exact",
+      "locationRadiusM": null,
+      "placeName": "Chambers St",
+      "capturedAt": "2026-03-14T14:55",
+      "timePrecision": "exact",
+      "tags": [
+        "barrier",
+        "centre st"
+      ],
+      "contributor": "Anonymous contributor",
+      "media": [],
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    },
+    {
+      "id": "pt_seed00011",
+      "title": "Chanting at the barrier",
+      "description": "Chanting right at the barrier. Recorded from a few rows back, so the audio is better than the picture.",
+      "kind": "video",
+      "location": [
+        -74.00331,
+        40.71368
+      ],
+      "locationPrecision": "exact",
+      "locationRadiusM": null,
+      "placeName": "Centre St",
+      "capturedAt": "2026-03-14T15:12",
+      "timePrecision": "exact",
+      "tags": [
+        "barrier",
+        "centre st"
+      ],
+      "contributor": "M. R.",
+      "media": [
+        {
+          "id": "med_seed10v",
+          "kind": "video",
+          "source": "external",
+          "durationSec": 24
+        }
+      ],
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    },
+    {
+      "id": "pt_seed00012",
+      "title": "Signs left along the railing",
+      "description": "Found this on my phone afterward and the timestamp is gone. I remember it being sometime in the afternoon.",
+      "kind": "photo",
+      "location": [
+        -74.00444,
+        40.71274
+      ],
+      "locationPrecision": "approximate",
+      "locationRadiusM": 60,
+      "placeName": "Centre St",
+      "capturedAt": "2026-03-14T15:40",
+      "timePrecision": "approximate",
+      "tags": [
+        "barrier",
+        "centre st"
+      ],
+      "contributor": "Anonymous contributor",
+      "media": [],
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    },
+    {
+      "id": "pt_seed00013",
+      "title": "People return to the square at dusk",
+      "description": "People walking back into the square as the light started to go.",
+      "kind": "photo",
+      "location": [
+        -74.00314,
+        40.71448
+      ],
+      "locationPrecision": "exact",
+      "locationRadiusM": null,
+      "placeName": "Foley Square",
+      "capturedAt": "2026-03-14T18:48",
+      "timePrecision": "exact",
+      "tags": [
+        "vigil",
+        "foley square"
+      ],
+      "contributor": "J. Ortiz",
+      "media": [],
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    },
+    {
+      "id": "pt_seed00014",
+      "title": "Candles around the fountain",
+      "description": "Candles on the ground around the fountain. Mostly quiet, a few people speaking.",
+      "kind": "video",
+      "location": [
+        -74.00275,
+        40.71475
+      ],
+      "locationPrecision": "exact",
+      "locationRadiusM": null,
+      "placeName": "Foley Square",
+      "capturedAt": "2026-03-14T19:30",
+      "timePrecision": "exact",
+      "tags": [
+        "vigil",
+        "foley square"
+      ],
+      "contributor": "Anonymous contributor",
+      "media": [
+        {
+          "id": "med_seed13v",
+          "kind": "video",
+          "source": "external",
+          "durationSec": 52
+        }
+      ],
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    },
+    {
+      "id": "pt_seed00015",
+      "title": "The last of the crowd heads home",
+      "description": "Last photo of the night. Most people had left and a few were collecting the candles.",
+      "kind": "photo",
+      "location": [
+        -74.00235,
+        40.71505
+      ],
+      "locationPrecision": "exact",
+      "locationRadiusM": null,
+      "placeName": "Foley Square",
+      "capturedAt": "2026-03-14T20:12",
+      "timePrecision": "exact",
+      "tags": [
+        "vigil",
+        "foley square"
+      ],
+      "contributor": "Dee",
+      "media": [],
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    },
+    {
+      "id": "pt_seed00016",
+      "title": "Mural on a side street",
+      "description": "New mural that went up over the winter. The artist was still touching up one corner.",
+      "kind": "photo",
+      "location": [
+        -74.0117,
+        40.72178
+      ],
+      "locationPrecision": "exact",
+      "locationRadiusM": null,
+      "placeName": "Lower Manhattan",
+      "capturedAt": "2026-02-08T14:00",
+      "timePrecision": "exact",
+      "tags": [
+        "art"
+      ],
+      "contributor": "Anonymous contributor",
+      "media": [],
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    },
+    {
+      "id": "pt_seed00017",
+      "title": "Block party setup",
+      "description": "Tables going out before the street closed to cars for the afternoon.",
+      "kind": "photo",
+      "location": [
+        -73.98811,
+        40.69594
+      ],
+      "locationPrecision": "exact",
+      "locationRadiusM": null,
+      "placeName": "Downtown Brooklyn",
+      "capturedAt": "2026-06-06T11:30",
+      "timePrecision": "exact",
+      "tags": [
+        "community"
+      ],
+      "contributor": "Anonymous contributor",
+      "media": [],
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    },
+    {
+      "id": "pt_seed00018",
+      "title": "Street performers near the subway",
+      "description": "A brass band playing by the station entrance during the evening rush.",
+      "kind": "video",
+      "location": [
+        -74.00301,
+        40.71972
+      ],
+      "locationPrecision": "exact",
+      "locationRadiusM": null,
+      "placeName": "Lower Manhattan",
+      "capturedAt": "2026-04-23T18:30",
+      "timePrecision": "exact",
+      "tags": [
+        "music"
+      ],
+      "contributor": "Anonymous contributor",
+      "media": [
+        {
+          "id": "med_seed102v",
+          "kind": "video",
+          "source": "external",
+          "durationSec": 21
+        },
+        {
+          "id": "med_seed102d",
+          "kind": "document",
+          "source": "external",
+          "fileName": "set-list.jpg"
+        }
+      ],
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    },
+    {
+      "id": "pt_seed00019",
+      "title": "Community garden cleanup",
+      "description": "Neighbors clearing out the beds at the start of spring.",
+      "kind": "photo",
+      "location": [
+        -73.98411,
+        40.69744
+      ],
+      "locationPrecision": "exact",
+      "locationRadiusM": null,
+      "placeName": "Downtown Brooklyn",
+      "capturedAt": "2026-03-28T10:30",
+      "timePrecision": "exact",
+      "tags": [
+        "community",
+        "garden"
+      ],
+      "contributor": "Anonymous contributor",
+      "media": [],
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    },
+    {
+      "id": "pt_seed00020",
+      "title": "Notice on a closed storefront",
+      "description": "Handwritten thank-you note left on the door after the shop closed. I am not sure exactly when I took this.",
+      "kind": "photo",
+      "location": [
+        -74.00682,
+        40.72157
+      ],
+      "locationPrecision": "obscured",
+      "locationRadiusM": 400,
+      "placeName": "Lower Manhattan",
+      "capturedAt": null,
+      "timePrecision": "exact",
+      "tags": [
+        "neighborhood"
+      ],
+      "contributor": "Anonymous contributor",
+      "media": [],
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    },
+    {
+      "id": "pt_seed00021",
+      "title": "Bike lane opening",
+      "description": "Riders trying out the new protected lane on its first morning.",
+      "kind": "video",
+      "location": [
+        -73.98058,
+        40.69364
+      ],
+      "locationPrecision": "exact",
+      "locationRadiusM": null,
+      "placeName": "Downtown Brooklyn",
+      "capturedAt": "2026-05-11T11:00",
+      "timePrecision": "exact",
+      "tags": [
+        "transit"
+      ],
+      "contributor": "Anonymous contributor",
+      "media": [
+        {
+          "id": "med_seed105v",
+          "kind": "video",
+          "source": "external",
+          "durationSec": 37
+        }
+      ],
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    },
+    {
+      "id": "pt_seed00022",
+      "title": "Weekend market",
+      "description": "Produce stalls at the Saturday market, busier than usual because of the weather.",
+      "kind": "photo",
+      "location": [
+        -74.00341,
+        40.71751
+      ],
+      "locationPrecision": "exact",
+      "locationRadiusM": null,
+      "placeName": "Lower Manhattan",
+      "capturedAt": "2026-05-02T11:40",
+      "timePrecision": "exact",
+      "tags": [
+        "market"
+      ],
+      "contributor": "Anonymous contributor",
+      "media": [],
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    },
+    {
+      "id": "pt_seed00023",
+      "title": "Neighborhood meeting",
+      "description": "Residents at a meeting about changes to the local bus routes.",
+      "kind": "photo",
+      "location": [
+        -73.98102,
+        40.69988
+      ],
+      "locationPrecision": "exact",
+      "locationRadiusM": null,
+      "placeName": "Downtown Brooklyn",
+      "capturedAt": "2026-01-20T19:00",
+      "timePrecision": "exact",
+      "tags": [
+        "community",
+        "transit"
+      ],
+      "contributor": "Anonymous contributor",
+      "media": [],
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    },
+    {
+      "id": "pt_seed00024",
+      "title": "Mural on a side street",
+      "description": "New mural that went up over the winter. The artist was still touching up one corner.",
+      "kind": "photo",
+      "location": [
+        -74.01186,
+        40.71752
+      ],
+      "locationPrecision": "exact",
+      "locationRadiusM": null,
+      "placeName": "Lower Manhattan",
+      "capturedAt": "2026-02-08T14:00",
+      "timePrecision": "exact",
+      "tags": [
+        "art"
+      ],
+      "contributor": "Anonymous contributor",
+      "media": [],
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    },
+    {
+      "id": "pt_seed00025",
+      "title": "Block party setup",
+      "description": "Tables going out before the street closed to cars for the afternoon.",
+      "kind": "photo",
+      "location": [
+        -73.98571,
+        40.69545
+      ],
+      "locationPrecision": "exact",
+      "locationRadiusM": null,
+      "placeName": "Downtown Brooklyn",
+      "capturedAt": "2026-06-06T11:30",
+      "timePrecision": "exact",
+      "tags": [
+        "community"
+      ],
+      "contributor": "Anonymous contributor",
+      "media": [],
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    },
+    {
+      "id": "pt_seed00026",
+      "title": "Street performers near the subway",
+      "description": "A brass band playing by the station entrance during the evening rush.",
+      "kind": "video",
+      "location": [
+        -74.00805,
+        40.72085
+      ],
+      "locationPrecision": "exact",
+      "locationRadiusM": null,
+      "placeName": "Lower Manhattan",
+      "capturedAt": "2026-04-23T18:30",
+      "timePrecision": "exact",
+      "tags": [
+        "music"
+      ],
+      "contributor": "Anonymous contributor",
+      "media": [
+        {
+          "id": "med_seed110v",
+          "kind": "video",
+          "source": "external",
+          "durationSec": 21
+        },
+        {
+          "id": "med_seed110d",
+          "kind": "document",
+          "source": "external",
+          "fileName": "set-list.jpg"
+        }
+      ],
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    },
+    {
+      "id": "pt_seed00027",
+      "title": "Community garden cleanup",
+      "description": "Neighbors clearing out the beds at the start of spring.",
+      "kind": "photo",
+      "location": [
+        -73.98584,
+        40.69232
+      ],
+      "locationPrecision": "exact",
+      "locationRadiusM": null,
+      "placeName": "Downtown Brooklyn",
+      "capturedAt": "2026-03-28T10:30",
+      "timePrecision": "exact",
+      "tags": [
+        "community",
+        "garden"
+      ],
+      "contributor": "Anonymous contributor",
+      "media": [],
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    },
+    {
+      "id": "pt_seed00028",
+      "title": "Notice on a closed storefront",
+      "description": "Handwritten thank-you note left on the door after the shop closed. I am not sure exactly when I took this.",
+      "kind": "photo",
+      "location": [
+        -74.00677,
+        40.71217
+      ],
+      "locationPrecision": "obscured",
+      "locationRadiusM": 400,
+      "placeName": "Lower Manhattan",
+      "capturedAt": null,
+      "timePrecision": "exact",
+      "tags": [
+        "neighborhood"
+      ],
+      "contributor": "Anonymous contributor",
+      "media": [],
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    },
+    {
+      "id": "pt_seed00029",
+      "title": "Bike lane opening",
+      "description": "Riders trying out the new protected lane on its first morning.",
+      "kind": "video",
+      "location": [
+        -73.98744,
+        40.69344
+      ],
+      "locationPrecision": "exact",
+      "locationRadiusM": null,
+      "placeName": "Downtown Brooklyn",
+      "capturedAt": "2026-05-11T11:00",
+      "timePrecision": "exact",
+      "tags": [
+        "transit"
+      ],
+      "contributor": "Anonymous contributor",
+      "media": [
+        {
+          "id": "med_seed113v",
+          "kind": "video",
+          "source": "external",
+          "durationSec": 37
+        }
+      ],
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    },
+    {
+      "id": "pt_seed00030",
+      "title": "Weekend market",
+      "description": "Produce stalls at the Saturday market, busier than usual because of the weather.",
+      "kind": "photo",
+      "location": [
+        -74.00612,
+        40.71801
+      ],
+      "locationPrecision": "exact",
+      "locationRadiusM": null,
+      "placeName": "Lower Manhattan",
+      "capturedAt": "2026-05-02T11:40",
+      "timePrecision": "exact",
+      "tags": [
+        "market"
+      ],
+      "contributor": "Anonymous contributor",
+      "media": [],
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    },
+    {
+      "id": "pt_seed00031",
+      "title": "Neighborhood meeting",
+      "description": "Residents at a meeting about changes to the local bus routes.",
+      "kind": "photo",
+      "location": [
+        -73.97827,
+        40.69767
+      ],
+      "locationPrecision": "exact",
+      "locationRadiusM": null,
+      "placeName": "Downtown Brooklyn",
+      "capturedAt": "2026-01-20T19:00",
+      "timePrecision": "exact",
+      "tags": [
+        "community",
+        "transit"
+      ],
+      "contributor": "Anonymous contributor",
+      "media": [],
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    },
+    {
+      "id": "pt_seed00032",
+      "title": "Mural on a side street",
+      "description": "New mural that went up over the winter. The artist was still touching up one corner.",
+      "kind": "photo",
+      "location": [
+        -74.00355,
+        40.72172
+      ],
+      "locationPrecision": "exact",
+      "locationRadiusM": null,
+      "placeName": "Lower Manhattan",
+      "capturedAt": "2026-02-08T14:00",
+      "timePrecision": "exact",
+      "tags": [
+        "art"
+      ],
+      "contributor": "Anonymous contributor",
+      "media": [],
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    },
+    {
+      "id": "pt_seed00033",
+      "title": "Block party setup",
+      "description": "Tables going out before the street closed to cars for the afternoon.",
+      "kind": "photo",
+      "location": [
+        -73.98648,
+        40.69928
+      ],
+      "locationPrecision": "exact",
+      "locationRadiusM": null,
+      "placeName": "Downtown Brooklyn",
+      "capturedAt": "2026-06-06T11:30",
+      "timePrecision": "exact",
+      "tags": [
+        "community"
+      ],
+      "contributor": "Anonymous contributor",
+      "media": [],
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    },
+    {
+      "id": "pt_seed00034",
+      "title": "Street performers near the subway",
+      "description": "A brass band playing by the station entrance during the evening rush.",
+      "kind": "video",
+      "location": [
+        -74.00776,
+        40.716
+      ],
+      "locationPrecision": "exact",
+      "locationRadiusM": null,
+      "placeName": "Lower Manhattan",
+      "capturedAt": "2026-04-23T18:30",
+      "timePrecision": "exact",
+      "tags": [
+        "music"
+      ],
+      "contributor": "Anonymous contributor",
+      "media": [
+        {
+          "id": "med_seed118v",
+          "kind": "video",
+          "source": "external",
+          "durationSec": 21
+        },
+        {
+          "id": "med_seed118d",
+          "kind": "document",
+          "source": "external",
+          "fileName": "set-list.jpg"
+        }
+      ],
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    },
+    {
+      "id": "pt_seed00035",
+      "title": "Community garden cleanup",
+      "description": "Neighbors clearing out the beds at the start of spring.",
+      "kind": "photo",
+      "location": [
+        -73.98305,
+        40.69155
+      ],
+      "locationPrecision": "exact",
+      "locationRadiusM": null,
+      "placeName": "Downtown Brooklyn",
+      "capturedAt": "2026-03-28T10:30",
+      "timePrecision": "exact",
+      "tags": [
+        "community",
+        "garden"
+      ],
+      "contributor": "Anonymous contributor",
+      "media": [],
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    },
+    {
+      "id": "pt_seed00036",
+      "title": "Notice on a closed storefront",
+      "description": "Handwritten thank-you note left on the door after the shop closed. I am not sure exactly when I took this.",
+      "kind": "photo",
+      "location": [
+        -74.01198,
+        40.71321
+      ],
+      "locationPrecision": "obscured",
+      "locationRadiusM": 400,
+      "placeName": "Lower Manhattan",
+      "capturedAt": null,
+      "timePrecision": "exact",
+      "tags": [
+        "neighborhood"
+      ],
+      "contributor": "Anonymous contributor",
+      "media": [],
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    },
+    {
+      "id": "pt_seed00037",
+      "title": "Bike lane opening",
+      "description": "Riders trying out the new protected lane on its first morning.",
+      "kind": "video",
+      "location": [
+        -73.98071,
+        40.69858
+      ],
+      "locationPrecision": "exact",
+      "locationRadiusM": null,
+      "placeName": "Downtown Brooklyn",
+      "capturedAt": "2026-05-11T11:00",
+      "timePrecision": "exact",
+      "tags": [
+        "transit"
+      ],
+      "contributor": "Anonymous contributor",
+      "media": [
+        {
+          "id": "med_seed121v",
+          "kind": "video",
+          "source": "external",
+          "durationSec": 37
+        }
+      ],
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    },
+    {
+      "id": "pt_seed00038",
+      "title": "Weekend market",
+      "description": "Produce stalls at the Saturday market, busier than usual because of the weather.",
+      "kind": "photo",
+      "location": [
+        -74.00425,
+        40.72088
+      ],
+      "locationPrecision": "exact",
+      "locationRadiusM": null,
+      "placeName": "Lower Manhattan",
+      "capturedAt": "2026-05-02T11:40",
+      "timePrecision": "exact",
+      "tags": [
+        "market"
+      ],
+      "contributor": "Anonymous contributor",
+      "media": [],
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    },
+    {
+      "id": "pt_seed00039",
+      "title": "Neighborhood meeting",
+      "description": "Residents at a meeting about changes to the local bus routes.",
+      "kind": "photo",
+      "location": [
+        -73.98446,
+        40.69186
+      ],
+      "locationPrecision": "exact",
+      "locationRadiusM": null,
+      "placeName": "Downtown Brooklyn",
+      "capturedAt": "2026-01-20T19:00",
+      "timePrecision": "exact",
+      "tags": [
+        "community",
+        "transit"
+      ],
+      "contributor": "Anonymous contributor",
+      "media": [],
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    },
+    {
+      "id": "pt_seed00040",
+      "title": "Mural on a side street",
+      "description": "New mural that went up over the winter. The artist was still touching up one corner.",
+      "kind": "photo",
+      "location": [
+        -74.00898,
+        40.71484
+      ],
+      "locationPrecision": "exact",
+      "locationRadiusM": null,
+      "placeName": "Lower Manhattan",
+      "capturedAt": "2026-02-08T14:00",
+      "timePrecision": "exact",
+      "tags": [
+        "art"
+      ],
+      "contributor": "Anonymous contributor",
+      "media": [],
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    },
+    {
+      "id": "pt_seed00041",
+      "title": "Block party setup",
+      "description": "Tables going out before the street closed to cars for the afternoon.",
+      "kind": "photo",
+      "location": [
+        -73.97821,
+        40.69889
+      ],
+      "locationPrecision": "exact",
+      "locationRadiusM": null,
+      "placeName": "Downtown Brooklyn",
+      "capturedAt": "2026-06-06T11:30",
+      "timePrecision": "exact",
+      "tags": [
+        "community"
+      ],
+      "contributor": "Anonymous contributor",
+      "media": [],
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    }
+  ],
+  "collections": [
+    {
+      "id": "col_seedspring26",
+      "title": "Spring Mobilization 2026",
+      "description": "Uploads from the spring actions across Downtown Brooklyn and Lower Manhattan. Fictional sample data.",
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    }
+  ],
+  "stories": [
+    {
+      "id": "sty_seedbridge",
+      "collectionId": "col_seedspring26",
+      "title": "March over the Brooklyn Bridge",
+      "summary": "From the morning gathering at Cadman Plaza, across the bridge, to the evening vigil at Foley Square.",
+      "status": "published",
+      "createdAt": "2026-03-15T09:00:00.000Z",
+      "updatedAt": "2026-03-15T09:00:00.000Z"
+    }
+  ],
+  "chapters": [
+    {
+      "id": "ch_seedbridge0",
+      "storyId": "sty_seedbridge",
+      "position": 0,
+      "title": "Gathering",
+      "narrative": "People start arriving at Cadman Plaza around 10 AM. By late morning the central lawn is full.",
+      "connection": "timeline",
+      "route": [],
+      "camera": {
+        "center": [
+          -73.9905,
+          40.6985
+        ],
+        "zoom": 16,
+        "bearing": -15,
+        "pitch": 45
+      }
+    },
+    {
+      "id": "ch_seedbridge1",
+      "storyId": "sty_seedbridge",
+      "position": 1,
+      "title": "The march sets off",
+      "narrative": "The front of the march leaves the plaza and climbs the ramp onto the bridge walkway.",
+      "connection": "path",
+      "route": [
+        [
+          -73.99045,
+          40.69855
+        ],
+        [
+          -73.99046,
+          40.6987
+        ],
+        [
+          -73.99028,
+          40.69885
+        ],
+        [
+          -73.9902,
+          40.69912
+        ],
+        [
+          -73.99027,
+          40.69933
+        ],
+        [
+          -73.99044,
+          40.69948
+        ],
+        [
+          -73.99043,
+          40.69964
+        ],
+        [
+          -73.99015,
+          40.69976
+        ],
+        [
+          -73.98989,
+          40.70002
+        ],
+        [
+          -73.98984,
+          40.70056
+        ],
+        [
+          -73.99205,
+          40.70226
+        ],
+        [
+          -73.99438,
+          40.70418
+        ],
+        [
+          -73.99438,
+          40.70418
+        ]
+      ],
+      "camera": {
+        "center": [
+          -73.9918,
+          40.7018
+        ],
+        "zoom": 15.5,
+        "bearing": -40,
+        "pitch": 45
+      }
+    },
+    {
+      "id": "ch_seedbridge2",
+      "storyId": "sty_seedbridge",
+      "position": 2,
+      "title": "On the bridge",
+      "narrative": "The walkway fills between the towers as the march crosses toward Manhattan.",
+      "connection": "path",
+      "route": [
+        [
+          -73.99438,
+          40.70418
+        ],
+        [
+          -73.9983,
+          40.70719
+        ],
+        [
+          -74.00443,
+          40.71211
+        ],
+        [
+          -74.00457,
+          40.71239
+        ],
+        [
+          -74.00455,
+          40.71263
+        ],
+        [
+          -74.00448,
+          40.71269
+        ],
+        [
+          -74.00437,
+          40.71265
+        ],
+        [
+          -74.00348,
+          40.71357
+        ]
+      ],
+      "camera": {
+        "center": [
+          -74,
+          40.7085
+        ],
+        "zoom": 15,
+        "bearing": -40,
+        "pitch": 45
+      }
+    },
+    {
+      "id": "ch_seedbridge3",
+      "storyId": "sty_seedbridge",
+      "position": 3,
+      "title": "Stopped at Centre St",
+      "narrative": "Barriers halt the march at the Manhattan end. At about the same time, a second group heads west along Chambers St.",
+      "connection": "path",
+      "route": [
+        [
+          -74.00388,
+          40.71315
+        ],
+        [
+          -74.00408,
+          40.71325
+        ],
+        [
+          -74.00429,
+          40.71312
+        ],
+        [
+          -74.00496,
+          40.71348
+        ],
+        [
+          -74.00625,
+          40.71402
+        ],
+        [
+          -74.00636,
+          40.71387
+        ]
+      ],
+      "camera": {
+        "center": [
+          -74.0044,
+          40.7132
+        ],
+        "zoom": 16,
+        "bearing": -10,
+        "pitch": 45
+      }
+    },
+    {
+      "id": "ch_seedbridge4",
+      "storyId": "sty_seedbridge",
+      "position": 4,
+      "title": "Vigil at Foley Square",
+      "narrative": "After a quiet stretch, people return to the square at dusk for a candlelight vigil.",
+      "connection": "timeline",
+      "route": [],
+      "camera": {
+        "center": [
+          -74.0028,
+          40.7147
+        ],
+        "zoom": 17,
+        "bearing": 20,
+        "pitch": 45
+      }
+    }
+  ],
+  "chapterPoints": [
+    {
+      "chapterId": "ch_seedbridge0",
+      "pointId": "pt_seed00001",
+      "position": 0,
+      "note": ""
+    },
+    {
+      "chapterId": "ch_seedbridge0",
+      "pointId": "pt_seed00002",
+      "position": 1,
+      "note": ""
+    },
+    {
+      "chapterId": "ch_seedbridge0",
+      "pointId": "pt_seed00003",
+      "position": 2,
+      "note": ""
+    },
+    {
+      "chapterId": "ch_seedbridge1",
+      "pointId": "pt_seed00004",
+      "position": 0,
+      "note": ""
+    },
+    {
+      "chapterId": "ch_seedbridge1",
+      "pointId": "pt_seed00005",
+      "position": 1,
+      "note": ""
+    },
+    {
+      "chapterId": "ch_seedbridge1",
+      "pointId": "pt_seed00006",
+      "position": 2,
+      "note": ""
+    },
+    {
+      "chapterId": "ch_seedbridge2",
+      "pointId": "pt_seed00007",
+      "position": 0,
+      "note": ""
+    },
+    {
+      "chapterId": "ch_seedbridge2",
+      "pointId": "pt_seed00008",
+      "position": 1,
+      "note": ""
+    },
+    {
+      "chapterId": "ch_seedbridge3",
+      "pointId": "pt_seed00009",
+      "position": 0,
+      "note": ""
+    },
+    {
+      "chapterId": "ch_seedbridge3",
+      "pointId": "pt_seed00010",
+      "position": 1,
+      "note": "Same hour, different place. The main group is still at the barrier on Centre St."
+    },
+    {
+      "chapterId": "ch_seedbridge3",
+      "pointId": "pt_seed00011",
+      "position": 2,
+      "note": "Meanwhile, 17 min earlier: a second group on Chambers St."
+    },
+    {
+      "chapterId": "ch_seedbridge3",
+      "pointId": "pt_seed00012",
+      "position": 3,
+      "note": ""
+    },
+    {
+      "chapterId": "ch_seedbridge4",
+      "pointId": "pt_seed00013",
+      "position": 0,
+      "note": ""
+    },
+    {
+      "chapterId": "ch_seedbridge4",
+      "pointId": "pt_seed00014",
+      "position": 1,
+      "note": ""
+    },
+    {
+      "chapterId": "ch_seedbridge4",
+      "pointId": "pt_seed00015",
+      "position": 2,
+      "note": ""
+    }
+  ]
+}
