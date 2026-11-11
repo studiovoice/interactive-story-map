@@ -149,4 +149,9 @@ traffic, self-host Photon and set `PHOTON_URL`, or add another provider (Pelias,
   hundreds of points; switch to a clustered GeoJSON layer when the data grows.
 - Viewer preferences (theme, map display options) live in the header's settings menu and are stored in localStorage via
   [`src/lib/settings.ts`](src/lib/settings.ts). Add a setting there and a row in `src/components/settings-menu.tsx`.
+- **Home area and start view:** every viewer has a home area: the place they picked in the settings menu, or else
+  the site's default area (`NEXT_PUBLIC_DEFAULT_VIEW` in `.env`, e.g. a city), or else, if that isn't set, a fit of
+  all points. The explore map's ⌂ button goes there. "Map starts at" opens the explore and new-point maps on the
+  default area, where you left off, or your chosen place. Story screens follow the story; links with a location
+  (`?lng=&lat=`) still win. See [`src/components/map/start-view.ts`](src/components/map/start-view.ts).
 - There's no auth yet. Every server action has a `TODO(auth)` spot (see the top of `src/lib/actions.ts`).
