@@ -17,7 +17,14 @@ type MapContextValue = {
   /** 0 until the base style has loaded; bumps on every (re)load so layers re-add themselves. */
   styleKey: number
   dark: boolean
+  /**
+   * Let a layer claim map clicks (e.g. a click on one of its points). The handler returns true
+   * when it handled the click, and MapView's own `onClick` is then skipped. Returns an unsubscribe.
+   */
+  interceptClick: (handler: ClickInterceptor) => () => void
 }
+
+export type ClickInterceptor = (e: MapMouseEvent) => boolean
 
 const MapContext = createContext<MapContextValue | null>(null)
 
@@ -69,6 +76,12 @@ export function MapView({
     onReadyRef.current = onReady
   })
 
+  const interceptorsRef = useRef(new Set<ClickInterceptor>())
+  const [interceptClick] = useState(() => (handler: ClickInterceptor) => {
+    interceptorsRef.current.add(handler)
+    return () => void interceptorsRef.current.delete(handler)
+  })
+
   const initialViewRef = useRef(initialView)
   const darkRef = useRef(dark)
 
@@ -97,13 +110,16 @@ export function MapView({
           if (!map || map.hasImage(e.id)) return
           map.addImage(e.id, { width: 1, height: 1, data: new Uint8Array(4) })
         })
-        map.on("click", (e) => onClickRef.current?.(e))
+        map.on("click", (e) => {
+          for (const intercept of interceptorsRef.current) if (intercept(e)) return
+          onClickRef.current?.(e)
+        })
         map.on("error", (e) => {
           if (!map?.isStyleLoaded() && !("sourceId" in e)) setFailed(true)
         })
         const m = map
         // Markers can go on right away; layers wait for styleKey > 0 (style loaded).
-        setCtx({ map: m, lib, styleKey: m.isStyleLoaded() ? 1 : 0, dark: darkRef.current })
+        setCtx({ map: m, lib, styleKey: m.isStyleLoaded() ? 1 : 0, dark: darkRef.current, interceptClick })
         onReadyRef.current?.(m)
         map.once("load", () => {
           // Compact attribution opens itself on load; start collapsed.
@@ -124,7 +140,7 @@ export function MapView({
       map?.remove()
       setCtx(null)
     }
-  }, [maxPitch, navigation])
+  }, [maxPitch, navigation, interceptClick])
 
   // Swap the basemap when the theme changes.
   useEffect(() => {

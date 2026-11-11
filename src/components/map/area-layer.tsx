@@ -13,12 +13,15 @@ export function AreaLayer({
   points,
   highlightId,
   alwaysShow = false,
+  minZoom,
 }: {
   id: string
   points: Pick<Point, "id" | "location" | "locationPrecision" | "locationRadiusM">[]
   highlightId?: string | null
   /** Ignore the "Show approximate areas" setting (e.g. while editing a point's area). */
   alwaysShow?: boolean
+  /** Hide the areas when zoomed out further than this. */
+  minZoom?: number
 }) {
   const { showApproxAreas } = useSettings()
   const colors = useThemeColors()
@@ -33,6 +36,7 @@ export function AreaLayer({
         {
           id: `${id}-fill`,
           type: "fill",
+          ...(minZoom !== undefined && { minzoom: minZoom }),
           paint: {
             "fill-color": colors.primary,
             "fill-opacity": ["case", ["==", ["get", "id"], hl], 0.18, ["get", "obscured"], 0.1, 0.06],
@@ -41,6 +45,7 @@ export function AreaLayer({
         {
           id: `${id}-outline`,
           type: "line",
+          ...(minZoom !== undefined && { minzoom: minZoom }),
           paint: {
             "line-color": colors.primary,
             "line-width": ["case", ["==", ["get", "id"], hl], 2, 1.25],

@@ -18,7 +18,13 @@ function resolve(name: string): string {
   return `rgb(${r},${g},${b})`
 }
 
-const FALLBACK = { primary: "rgb(24,24,27)", background: "rgb(255,255,255)", muted: "rgb(113,113,122)" }
+const FALLBACK = {
+  primary: "rgb(24,24,27)",
+  primaryForeground: "rgb(250,250,250)",
+  foreground: "rgb(9,9,11)",
+  background: "rgb(255,255,255)",
+  muted: "rgb(113,113,122)",
+}
 
 export function useThemeColors() {
   const { resolvedTheme } = useTheme()
@@ -28,6 +34,8 @@ export function useThemeColors() {
     const raf = requestAnimationFrame(() =>
       setColors({
         primary: resolve("--primary"),
+        primaryForeground: resolve("--primary-foreground"),
+        foreground: resolve("--foreground"),
         background: resolve("--background"),
         muted: resolve("--muted-foreground"),
       }),
