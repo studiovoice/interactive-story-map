@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { resetSettings, updateSettings, useSettings } from "@/lib/settings"
+import { StartViewSetting } from "./start-view-setting"
 
 /** Header gear menu. Add new preferences as another <Section> / row. */
 export function SettingsMenu() {
@@ -53,6 +54,7 @@ export function SettingsMenu() {
         <Separator />
 
         <Section title="Map">
+          <StartViewSetting />
           <SwitchRow
             id="setting-approx-areas"
             label="Show approximate areas"

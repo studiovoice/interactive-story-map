@@ -6,7 +6,8 @@ import { useState } from "react"
 import { toast } from "sonner"
 import { AreaLayer } from "@/components/map/area-layer"
 import { MapMarker } from "@/components/map/map-marker"
-import { MapView } from "@/components/map/map-view"
+import { MapView, type InitialView } from "@/components/map/map-view"
+import { startView } from "@/components/map/start-view"
 import { PointsLayer, type PointLike } from "@/components/map/points-layer"
 import { flyToPlace, GEOCODER_CREDIT, placesGroup } from "@/components/search/place-items"
 import { SearchCombobox } from "@/components/search/search-combobox"
@@ -16,6 +17,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import type { LngLat } from "@/lib/domain/schema"
 import type { PlaceResult } from "@/lib/geocoding/types"
+import { getSettings } from "@/lib/settings"
 
 const round = (v: number) => +v.toFixed(6)
 
@@ -52,12 +54,16 @@ export function LocationPicker({
     if (!value) set(place.center)
     onPlacePicked?.(place)
   }
-  const [initial] = useState(() =>
-    value
-      ? { center: value, zoom: 15 }
-      : context.length
-        ? { center: context[0].location, zoom: 13 }
-        : { center: [-73.9985, 40.7052] as LngLat, zoom: 12 },
+  // An existing pin opens on the pin; otherwise the viewer's "Map starts at" setting decides.
+  // (A function: it runs when the map is created, once saved settings are readable.)
+  const [initial] = useState(
+    () => (): InitialView =>
+      value
+        ? { center: value, zoom: 15 }
+        : startView(
+            getSettings(),
+            context.map((p) => p.location),
+          ),
   )
   const [latText, setLatText] = useState(value ? String(value[1]) : "")
   const [lngText, setLngText] = useState(value ? String(value[0]) : "")

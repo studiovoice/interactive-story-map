@@ -1,12 +1,15 @@
 "use client"
 
 import type { Map as MlMap, MapMouseEvent } from "maplibre-gl"
-import { MapPinPlusIcon } from "lucide-react"
+import { HouseIcon, MapPinPlusIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
 import { AreaLayer } from "@/components/map/area-layer"
+import { useRegisterActiveMap } from "@/components/map/active-map"
+import { MapControl } from "@/components/map/map-control"
 import { MapView } from "@/components/map/map-view"
 import { PointsLayer } from "@/components/map/points-layer"
+import { flyToView, homeView, saveLastView, startView } from "@/components/map/start-view"
 import { flyToPlace, GEOCODER_CREDIT, placesGroup } from "@/components/search/place-items"
 import { PlaceMarker } from "@/components/search/place-marker"
 import { SearchCombobox } from "@/components/search/search-combobox"
@@ -14,9 +17,8 @@ import { usePlaceSearch } from "@/components/search/use-place-search"
 import { usePointSearch } from "@/components/search/use-point-search"
 import { Button } from "@/components/ui/button"
 import type { MapPoint } from "@/lib/domain/schema"
-import { boundsOf } from "@/lib/geo"
 import type { PlaceResult } from "@/lib/geocoding/types"
-import { useSettings } from "@/lib/settings"
+import { getSettings, useSettings } from "@/lib/settings"
 import { formatCaptured } from "@/lib/time"
 import { cn } from "@/lib/utils"
 import { PointDetailPanel } from "./point-detail-panel"
@@ -33,7 +35,8 @@ export function ExploreMap({ points }: { points: MapPoint[] }) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [nearbyIds, setNearbyIds] = useState<string[]>([])
   const [dropMode, setDropMode] = useState(false)
-  const { showApproxAreas } = useSettings()
+  const settings = useSettings()
+  const { showApproxAreas } = settings
   const [place, setPlace] = useState<PlaceResult | null>(null)
   const getCenter = () => {
     const c = map?.getCenter().wrap()
@@ -52,10 +55,19 @@ export function ExploreMap({ points }: { points: MapPoint[] }) {
   const selected = selectedId ? (byId.get(selectedId) ?? null) : null
   const index = selected ? visible.findIndex((p) => p.id === selected.id) : -1
 
-  const [initialView] = useState(() => {
-    const b = boundsOf(points.map((p) => p.location))
-    return b ? { bounds: b, padding: 60 } : { center: [-40, 30] as [number, number], zoom: 1.6 }
-  })
+  const coords = useMemo(() => points.map((p) => p.location), [points])
+  // Called when the map is created, after the saved settings are readable.
+  const [initialView] = useState(() => () => startView(getSettings(), coords))
+  const home = homeView(settings, coords)
+
+  // Remember the view for "Where I left off", and let the settings menu use it ("Use current map view").
+  useEffect(() => {
+    if (!map) return
+    const save = () => saveLastView(map)
+    map.on("moveend", save)
+    return () => void map.off("moveend", save)
+  }, [map])
+  useRegisterActiveMap(map)
 
   function select(id: string, keepNearby = false) {
     const point = byId.get(id)
@@ -126,6 +138,16 @@ export function ExploreMap({ points }: { points: MapPoint[] }) {
         onClick={onMapClick}
         cursor={dropMode ? "crosshair" : undefined}
       >
+        <MapControl>
+          <button
+            type="button"
+            title={`Home: ${home.label}`}
+            aria-label={`Home: ${home.label}`}
+            onClick={() => map && flyToView(map, home.view)}
+          >
+            <HouseIcon className="mx-auto size-4 text-[#333]" />
+          </button>
+        </MapControl>
         <AreaLayer id="explore-areas" points={visible} highlightId={selectedId} minZoom={AREA_MIN_ZOOM} />
         <PointsLayer
           id="explore-points"
