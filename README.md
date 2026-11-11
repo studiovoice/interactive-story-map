@@ -39,7 +39,7 @@ Other scripts: `pnpm build`, `pnpm lint`, `pnpm typecheck`, `pnpm format`.
 
 | Route                              | What it does                                                                                                                                                                    |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/`                                | Map of every point. Filter, click for details, "Play from here" into any story that uses the point, drop a new point on the map.                                                |
+| `/`                                | Map of every point (clustered when zoomed out). Search, click for details, "Play from here" into any story that uses the point, drop a new point on the map.                    |
 | `/points`                          | Table of points with search, edit, delete.                                                                                                                                      |
 | `/points/new`, `/points/[id]/edit` | Point form with a map location picker (`?lng=&lat=` pre-fills the pin).                                                                                                         |
 | `/collections`                     | Collections grid; create.                                                                                                                                                       |
@@ -53,7 +53,8 @@ Other scripts: `pnpm build`, `pnpm lint`, `pnpm typecheck`, `pnpm format`.
 src/
   app/                      routes (thin: fetch data inside <Suspense>, render a component)
   components/
-    map/                    MapLibre wrapper: <MapView>, <MapMarker> (React portal), <MapLayer> (GeoJSON), camera helpers, marker CSS
+    map/                    MapLibre wrapper: <MapView>, <PointsLayer> (many points, WebGL, clustering), <MapLayer> (GeoJSON),
+                            <MapMarker> (one DOM marker, React portal), camera helpers, marker CSS
     points/                 explore map, detail panel, table, form, location picker, media/placeholder
     collections/            dialogs and actions for collections/stories
     stories/                player, timeline track, editor, chapter card, point browser
@@ -108,6 +109,24 @@ Points without media get a generated placeholder scene, like the prototype.
 To add MinIO/S3: implement the interface with `@aws-sdk/client-s3` (presigned PUT), select it with
 `NEXT_PUBLIC_STORAGE_DRIVER=s3`, add a server action that returns `createUploadUrl()`, upload from the point form, and
 save `{ source: "storage", storageKey }`.
+
+## Loading points on maps
+
+Maps that show many points (explore, the point form's location picker, the story editor) draw them with
+[`<PointsLayer>`](src/components/map/points-layer.tsx): one GPU-drawn GeoJSON layer instead of a DOM element per point,
+with hover labels and click handling. On the explore map nearby points merge into numbered clusters when zoomed out
+(click one to zoom in), and approximate areas only show from street level.
+
+The explore map gets a small `MapPoint` per point (`getMapPoints()` → `store.points.mapList()`: id, title, kind,
+location, precision, in-a-story). Everything else is loaded when a point is opened (`GET /api/points/:id`), and the
+search box asks the server (`GET /api/points/search?q=&lat=&lng=`), which returns every matching id (to filter the map)
+and the closest few in full. This holds up to tens of thousands of points: with 10,000 the page is about 200 KB
+gzipped and panning stays at 60 fps.
+
+Next step, when that's not enough: make `mapList` take a map tile (`/api/points/tiles/{z}/{x}/{y}`) and load tiles as
+the map moves, then move the query to PostGIS (a GiST index, and eventually `ST_AsMVT` vector tiles). `PointsLayer`
+only needs its data source changed. Still loading everything today: the points table (`/points`) and the story
+editor (it needs full points for its chapter lists); both should page or search on the server once data grows.
 
 ## Place search
 
