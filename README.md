@@ -145,8 +145,10 @@ traffic, self-host Photon and set `PHOTON_URL`, or add another provider (Pelias,
 
 - Next.js 16 with Cache Components: data reads call `connection()` and render inside `<Suspense>`. Mutations call
   `revalidatePath("/", "layout")`. See `AGENTS.md` and `node_modules/next/dist/docs/` for this version's APIs.
-- Maps: MapLibre GL 5 with OpenFreeMap tiles (Positron / Dark, following the theme). HTML markers are fine for
-  hundreds of points; switch to a clustered GeoJSON layer when the data grows.
+- Maps: MapLibre GL 5 with OpenFreeMap tiles (Positron / Dark, following the theme), in globe projection (flat from city
+  zoom; pass `projection="mercator"` to `<MapView>` for an always-flat map), with 3D buildings from zoom 14
+  (`buildings={false}` turns them off; see [`src/components/map/buildings.ts`](src/components/map/buildings.ts)). Points are drawn by `<PointsLayer>`
+  (see "Loading points on maps"); `<MapMarker>` is for a handful of special markers.
 - Viewer preferences (theme, map display options) live in the header's settings menu and are stored in localStorage via
   [`src/lib/settings.ts`](src/lib/settings.ts). Add a setting there and a row in `src/components/settings-menu.tsx`.
 - **Home area and start view:** every viewer has a home area: the place they picked in the settings menu, or else

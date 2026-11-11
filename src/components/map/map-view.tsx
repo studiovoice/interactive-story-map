@@ -8,6 +8,7 @@ import { useTheme } from "next-themes"
 import { createContext, use, useEffect, useRef, useState, type ReactNode } from "react"
 import type { Camera, LngLat } from "@/lib/domain/schema"
 import { cn } from "@/lib/utils"
+import { addBuildings3d, removeBuildings3d } from "./buildings"
 
 type MapLib = typeof import("maplibre-gl")
 
@@ -52,6 +53,7 @@ export function MapView({
   maxPitch = 70,
   navigation = true,
   projection = "globe",
+  buildings = true,
 }: {
   /** Read once, when the map is created. A function is called then (client-side, after hydration). */
   initialView: InitialView | (() => InitialView)
@@ -65,6 +67,8 @@ export function MapView({
   navigation?: boolean
   /** "globe" curves the map when zoomed out (flat again from city level); "mercator" is always flat. */
   projection?: "globe" | "mercator"
+  /** Draw buildings in 3D from zoom 14 (best seen with the map tilted). */
+  buildings?: boolean
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [ctx, setCtx] = useState<MapContextValue | null>(null)
@@ -88,6 +92,7 @@ export function MapView({
 
   const initialViewRef = useRef(initialView)
   const projectionRef = useRef(projection)
+  const buildingsRef = useRef(buildings)
   const darkRef = useRef(dark)
 
   useEffect(() => {
@@ -136,6 +141,7 @@ export function MapView({
         map.on("style.load", () => {
           // The projection belongs to the style, so set it again after every style (theme) swap.
           m.setProjection({ type: projectionRef.current })
+          if (buildingsRef.current) addBuildings3d(m, darkRef.current)
           setCtx((c) => (c ? { ...c, styleKey: c.styleKey + 1, dark: darkRef.current } : c))
         })
         ro = new ResizeObserver(() => m.resize())
@@ -165,6 +171,13 @@ export function MapView({
     projectionRef.current = projection
     if (ctx?.map.isStyleLoaded()) ctx.map.setProjection({ type: projection })
   }, [projection, ctx])
+
+  useEffect(() => {
+    buildingsRef.current = buildings
+    if (!ctx?.map.isStyleLoaded()) return
+    if (buildings) addBuildings3d(ctx.map, darkRef.current)
+    else removeBuildings3d(ctx.map)
+  }, [buildings, ctx])
 
   return (
     <div className={cn("relative overflow-hidden bg-muted", className)}>
