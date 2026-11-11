@@ -7,13 +7,14 @@ import { toast } from "sonner"
 import { AreaLayer } from "@/components/map/area-layer"
 import { MapMarker } from "@/components/map/map-marker"
 import { MapView } from "@/components/map/map-view"
+import { PointsLayer, type PointLike } from "@/components/map/points-layer"
 import { flyToPlace, GEOCODER_CREDIT, placesGroup } from "@/components/search/place-items"
 import { SearchCombobox } from "@/components/search/search-combobox"
 import { usePlaceSearch } from "@/components/search/use-place-search"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import type { LngLat, Point } from "@/lib/domain/schema"
+import type { LngLat } from "@/lib/domain/schema"
 import type { PlaceResult } from "@/lib/geocoding/types"
 
 const round = (v: number) => +v.toFixed(6)
@@ -29,7 +30,8 @@ export function LocationPicker({
 }: {
   value: LngLat | null
   onChange: (v: LngLat) => void
-  context?: Point[]
+  /** Other points, drawn faintly for orientation. */
+  context?: PointLike[]
   invalid?: boolean
   /** Draw the approximate / obscured area around the pin. */
   radiusM?: number | null
@@ -39,7 +41,7 @@ export function LocationPicker({
   const [map, setMap] = useState<MlMap | null>(null)
   const [placeQuery, setPlaceQuery] = useState("")
   const placeSearch = usePlaceSearch(placeQuery, () => {
-    const c = map?.getCenter()
+    const c = map?.getCenter().wrap()
     return c ? { lng: c.lng, lat: c.lat } : null
   })
 
@@ -117,11 +119,7 @@ export function LocationPicker({
           highlightId="picked"
           alwaysShow
         />
-        {context.map((p) => (
-          <MapMarker key={p.id} lngLat={p.location} title={p.title} className="pt faint">
-            <i className="body" />
-          </MapMarker>
-        ))}
+        <PointsLayer id="picker-context" points={context} look={() => ({ faint: true })} />
         {value && (
           <MapMarker lngLat={value} anchor="bottom" draggable className="pin" onDragEnd={(v) => set(v)}>
             <svg viewBox="0 0 26 34" className="size-full">

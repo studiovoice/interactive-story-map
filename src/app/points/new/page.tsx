@@ -4,7 +4,7 @@ import { PageContainer, PageHeader } from "@/components/page-header"
 import { PageLoading } from "@/components/page-loading"
 import { PointForm } from "@/components/points/point-form"
 import type { LngLat } from "@/lib/domain/schema"
-import { getPoints } from "@/lib/queries"
+import { getMapPoints } from "@/lib/queries"
 import { FreshOnNavigate } from "@/components/fresh-on-navigate"
 
 export const metadata: Metadata = { title: "New point" }
@@ -21,7 +21,7 @@ export default function NewPointPage({ searchParams }: PageProps<"/points/new">)
 }
 
 async function NewPoint({ searchParams }: Pick<PageProps<"/points/new">, "searchParams">) {
-  const [{ lng, lat }, points] = await Promise.all([searchParams, getPoints()])
+  const [{ lng, lat }, points] = await Promise.all([searchParams, getMapPoints()])
   const x = Number(lng),
     y = Number(lat)
   const initialLocation: LngLat | null =

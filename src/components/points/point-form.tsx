@@ -27,6 +27,7 @@ import {
   pointKinds,
   type LngLat,
   type LocationPrecision,
+  type MapPoint,
   type MediaAsset,
   type MediaKind,
   type Point,
@@ -62,7 +63,7 @@ export function PointForm({
 }: {
   point?: Point
   /** Other points, shown faintly on the location map. */
-  context: Point[]
+  context: MapPoint[]
   initialLocation?: LngLat | null
 }) {
   const router = useRouter()

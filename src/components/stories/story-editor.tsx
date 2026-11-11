@@ -10,8 +10,8 @@ import { ConfirmDelete } from "@/components/confirm-delete"
 import { chapterCamera, currentCamera } from "@/components/map/camera"
 import { AreaLayer } from "@/components/map/area-layer"
 import { MapLayer } from "@/components/map/map-layer"
-import { MapMarker } from "@/components/map/map-marker"
 import { MapView } from "@/components/map/map-view"
+import { PointsLayer } from "@/components/map/points-layer"
 import { useThemeColors } from "@/components/map/use-theme-colors"
 import { PointMedia } from "@/components/points/point-media"
 import { flyToPlace, GEOCODER_CREDIT, placesGroup } from "@/components/search/place-items"
@@ -67,7 +67,7 @@ export function StoryEditor({ story, points }: { story: StoryDetail; points: Poi
   const [map, setMap] = useState<MlMap | null>(null)
   const [placeQuery, setPlaceQuery] = useState("")
   const placeSearch = usePlaceSearch(placeQuery, () => {
-    const c = map?.getCenter()
+    const c = map?.getCenter().wrap()
     return c ? { lng: c.lng, lat: c.lat } : null
   })
 
@@ -450,33 +450,26 @@ export function StoryEditor({ story, points }: { story: StoryDetail; points: Poi
               },
             ]}
           />
-          {points.map((p) => {
-            const ci = chapterOfPoint.get(p.id)
-            const inActive = ci !== undefined && ci === activeIndex
-            const inStory = ci !== undefined
-            const num = inActive ? active!.points.findIndex((x) => x.pointId === p.id) + 1 : null
-            const lit = p.id === selectedPointId || p.id === highlightedPointId
-            return (
-              <MapMarker
-                key={p.id}
-                lngLat={p.location}
-                title={`${p.title}${inStory ? ` (chapter ${ci! + 1})` : ""}`}
-                className={cn(
-                  "pt",
-                  isFuzzy(p) && "fuzzy",
-                  inActive && "numbered filled",
-                  inStory && !inActive && "filled faint",
-                  !inStory && mode !== "add" && "faint",
-                  lit && "sel",
-                )}
-                onClick={() => onMarkerClick(p)}
-              >
-                <i className="pulse" />
-                <i className="body" />
-                {num !== null && <span className="num">{num}</span>}
-              </MapMarker>
-            )
-          })}
+          <PointsLayer
+            id="editor-points"
+            points={points}
+            look={(p) => {
+              const ci = chapterOfPoint.get(p.id)
+              const inActive = ci !== undefined && ci === activeIndex
+              const inStory = ci !== undefined
+              return {
+                filled: inStory,
+                faint: (inStory && !inActive) || (!inStory && mode !== "add"),
+                num: inActive ? active!.points.findIndex((x) => x.pointId === p.id) + 1 : null,
+                label: `${p.title}${inStory ? ` (chapter ${ci! + 1})` : ""}`,
+              }
+            }}
+            litIds={[selectedPointId, highlightedPointId]}
+            onPointClick={(id) => {
+              const p = pointsById.get(id)
+              if (p) onMarkerClick(p)
+            }}
+          />
         </MapView>
 
         {/* Jump to a place */}

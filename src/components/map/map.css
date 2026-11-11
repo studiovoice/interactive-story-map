@@ -104,71 +104,28 @@
   transition: opacity 0.2s;
 }
 
-/* ── Generic point marker (explore map, editor, picker) ── */
-.pt {
+/* ── Pulse around a selected point (drawn by PointsLayer; clicks pass through to the map) ── */
+.pt-pulse {
   width: 18px;
   height: 18px;
-  display: grid;
-  place-items: center;
-  cursor: pointer;
+  pointer-events: none;
 }
-.pt .body {
-  width: 13px;
-  height: 13px;
-  border-radius: 50%;
-  background: color-mix(in oklab, var(--background) 82%, transparent);
-  border: 1.5px solid var(--foreground);
-  transition: transform 0.15s;
-}
-.pt .pulse {
+.pt-pulse i {
   position: absolute;
   inset: 0;
   border-radius: 50%;
   border: 1.5px solid var(--primary);
-  opacity: 0;
-  pointer-events: none;
+  animation: pt-pulse 1.8s ease-out infinite;
 }
-.pt:hover .body {
-  transform: scale(1.3);
-}
-.pt.filled .body {
-  background: var(--primary);
-  border: 2px solid var(--background);
-  box-shadow: 0 1px 3px #0005;
-}
-.pt.faint {
-  opacity: 0.45;
-}
-.pt.faint:hover {
-  opacity: 1;
-}
-.pt.sel {
-  z-index: 4;
-}
-.pt.sel .body {
-  background: var(--primary);
-  border: 2px solid var(--background);
-  transform: scale(1.3);
-  box-shadow: 0 1px 3px #0005;
-}
-.pt.sel .pulse {
-  animation: mk-pulse 1.8s ease-out infinite;
-}
-.pt .num {
-  position: absolute;
-  font-size: 9px;
-  font-weight: 700;
-  line-height: 1;
-  color: var(--primary-foreground);
-  pointer-events: none;
-}
-.pt.numbered .body {
-  width: 17px;
-  height: 17px;
-}
-.pt.numbered {
-  width: 20px;
-  height: 20px;
+@keyframes pt-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
 }
 
 /* ── Location picker pin ── */
@@ -209,21 +166,16 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .mk.live .pulse,
-  .pt.sel .pulse {
+  .mk.live .pulse {
     animation: none;
+  }
+  /* No motion: a still ring so the selection stays visible. */
+  .pt-pulse i {
+    animation: none;
+    transform: scale(1.6);
+    opacity: 0.6;
   }
   .mk .body {
     animation: none;
   }
-}
-
-/* Approximate / privacy-obscured location: dashed ring instead of a solid dot. */
-.pt.fuzzy .body {
-  border-style: dashed;
-}
-.pt.fuzzy.filled .body,
-.pt.fuzzy.sel .body {
-  background: var(--background);
-  border: 2px dashed var(--primary);
 }

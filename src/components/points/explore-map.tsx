@@ -4,36 +4,29 @@ import type { Map as MlMap, MapMouseEvent } from "maplibre-gl"
 import { MapPinPlusIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
-import { MapMarker } from "@/components/map/map-marker"
+import { AreaLayer } from "@/components/map/area-layer"
 import { MapView } from "@/components/map/map-view"
-import { Button } from "@/components/ui/button"
+import { PointsLayer } from "@/components/map/points-layer"
 import { flyToPlace, GEOCODER_CREDIT, placesGroup } from "@/components/search/place-items"
 import { PlaceMarker } from "@/components/search/place-marker"
 import { SearchCombobox } from "@/components/search/search-combobox"
 import { usePlaceSearch } from "@/components/search/use-place-search"
-import type { Point, PointUsage } from "@/lib/domain/schema"
+import { usePointSearch } from "@/components/search/use-point-search"
+import { Button } from "@/components/ui/button"
+import type { MapPoint } from "@/lib/domain/schema"
 import { boundsOf } from "@/lib/geo"
-import { useSettings } from "@/lib/settings"
-import { cn } from "@/lib/utils"
-import { AreaLayer } from "@/components/map/area-layer"
-import { isFuzzy } from "@/lib/location"
 import type { PlaceResult } from "@/lib/geocoding/types"
+import { useSettings } from "@/lib/settings"
 import { formatCaptured } from "@/lib/time"
+import { cn } from "@/lib/utils"
 import { PointDetailPanel } from "./point-detail-panel"
 import { PointMedia } from "./point-media"
+import { usePointDetail } from "./use-point-detail"
 
-export function matchesQuery(p: Point, q: string) {
-  if (!q) return true
-  const s = q.toLowerCase()
-  return (
-    p.title.toLowerCase().includes(s) ||
-    p.description.toLowerCase().includes(s) ||
-    p.placeName.toLowerCase().includes(s) ||
-    p.tags.some((t) => t.toLowerCase().includes(s))
-  )
-}
+/** Approximate-area circles only mean something once you're zoomed in to street level. */
+const AREA_MIN_ZOOM = 12
 
-export function ExploreMap({ points, usage }: { points: Point[]; usage: Record<string, PointUsage[]> }) {
+export function ExploreMap({ points }: { points: MapPoint[] }) {
   const router = useRouter()
   const [map, setMap] = useState<MlMap | null>(null)
   const [query, setQuery] = useState("")
@@ -42,13 +35,21 @@ export function ExploreMap({ points, usage }: { points: Point[]; usage: Record<s
   const [dropMode, setDropMode] = useState(false)
   const { showApproxAreas } = useSettings()
   const [place, setPlace] = useState<PlaceResult | null>(null)
-  const placeSearch = usePlaceSearch(query, () => {
-    const c = map?.getCenter()
+  const getCenter = () => {
+    const c = map?.getCenter().wrap()
     return c ? { lng: c.lng, lat: c.lat } : null
-  })
+  }
+  const placeSearch = usePlaceSearch(query, getCenter)
+  const pointSearch = usePointSearch(query, getCenter)
+  const details = usePointDetail(selectedId, points)
 
-  const visible = useMemo(() => points.filter((p) => matchesQuery(p, query)), [points, query])
-  const selected = selectedId ? (points.find((p) => p.id === selectedId) ?? null) : null
+  const byId = useMemo(() => new Map(points.map((p) => [p.id, p])), [points])
+  // Typing filters the map once the server has answered (until then, keep what's shown).
+  const visible = useMemo(
+    () => (pointSearch.ids ? points.filter((p) => pointSearch.ids!.has(p.id)) : points),
+    [points, pointSearch.ids],
+  )
+  const selected = selectedId ? (byId.get(selectedId) ?? null) : null
   const index = selected ? visible.findIndex((p) => p.id === selected.id) : -1
 
   const [initialView] = useState(() => {
@@ -57,17 +58,18 @@ export function ExploreMap({ points, usage }: { points: Point[]; usage: Record<s
   })
 
   function select(id: string, keepNearby = false) {
-    const point = points.find((p) => p.id === id)
+    const point = byId.get(id)
     if (!map || !point) return
     if (!keepNearby) {
-      // Markers overlap when zoomed out, so also list every point stacked at that spot.
+      // Dots overlap when zoomed out, so also list every point stacked at that spot.
       const o = map.project(point.location)
       setNearbyIds(
         visible
           .filter((p) => {
             const q = map.project(p.location)
-            return Math.hypot(q.x - o.x, q.y - o.y) <= 16
+            return Math.abs(q.x - o.x) <= 12 && Math.abs(q.y - o.y) <= 12
           })
+          .slice(0, 30)
           .map((p) => p.id),
       )
     }
@@ -124,23 +126,16 @@ export function ExploreMap({ points, usage }: { points: Point[]; usage: Record<s
         onClick={onMapClick}
         cursor={dropMode ? "crosshair" : undefined}
       >
-        <AreaLayer id="explore-areas" points={visible} highlightId={selectedId} />
+        <AreaLayer id="explore-areas" points={visible} highlightId={selectedId} minZoom={AREA_MIN_ZOOM} />
+        <PointsLayer
+          id="explore-points"
+          points={visible}
+          look={(p) => ({ filled: p.inStory })}
+          litIds={[selectedId]}
+          cluster
+          onPointClick={(id) => select(id)}
+        />
         {place && <PlaceMarker place={place} onClear={() => setPlace(null)} />}
-        {visible.map((p) => {
-          const inStory = (usage[p.id]?.length ?? 0) > 0
-          return (
-            <MapMarker
-              key={p.id}
-              lngLat={p.location}
-              title={p.title}
-              className={cn("pt", inStory && "filled", isFuzzy(p) && "fuzzy", p.id === selectedId && "sel")}
-              onClick={() => select(p.id)}
-            >
-              <i className="pulse" />
-              <i className="body" />
-            </MapMarker>
-          )
-        })}
       </MapView>
 
       {/* Top-left: search + counts */}
@@ -154,9 +149,14 @@ export function ExploreMap({ points, usage }: { points: Point[]; usage: Record<s
           inputClassName="h-8 bg-popover/95 shadow-sm backdrop-blur"
           groups={[
             {
-              label: `Points${visible.length > 5 ? ` (showing 5 of ${visible.length})` : ""}`,
-              empty: "No points match",
-              items: visible.slice(0, 5).map((p) => ({
+              label: `Points${pointSearch.total > 5 ? ` (closest 5 of ${pointSearch.total})` : ""}`,
+              loading: pointSearch.loading && !pointSearch.top.length,
+              empty: !pointSearch.active
+                ? "Type 2+ letters to search points"
+                : pointSearch.error
+                  ? "Point search is unavailable right now."
+                  : "No points match",
+              items: pointSearch.top.map((p) => ({
                 id: p.id,
                 title: p.title,
                 subtitle: [formatCaptured(p.capturedAt, p.timePrecision === "approximate"), p.placeName]
@@ -178,9 +178,7 @@ export function ExploreMap({ points, usage }: { points: Point[]; usage: Record<s
           footer={placeSearch.active ? GEOCODER_CREDIT : "Typing filters the points on the map."}
         />
         <span className="rounded-full border bg-popover/95 px-2.5 py-1 text-xs text-muted-foreground shadow-sm backdrop-blur">
-          {visible.length === points.length
-            ? `${points.length} points`
-            : `${visible.length} of ${points.length} points`}
+          {pointSearch.ids ? `${pointSearch.total} of ${points.length} points` : `${points.length} points`}
           <span className="hidden sm:inline"> · Click one to see its details</span>
         </span>
       </div>
@@ -203,21 +201,24 @@ export function ExploreMap({ points, usage }: { points: Point[]; usage: Record<s
           <span className="flex items-center gap-1.5">
             <i className="inline-block size-2.5 rounded-full border-[1.5px] border-foreground" /> Not in a story
           </span>
-          {showApproxAreas && (
-            <span className="flex items-center gap-1.5">
-              <i className="inline-block size-2.5 rounded-full border-[1.5px] border-dashed border-primary bg-primary/10" />{" "}
-              Approx. area
-            </span>
-          )}
+          <span className="flex items-center gap-1.5" title="Approximate or hidden-for-privacy location">
+            <i className="inline-grid size-3.5 place-items-center rounded-full border border-foreground/50">
+              <i className="size-1.5 rounded-full border border-foreground" />
+            </i>
+            Approx.{showApproxAreas ? " (area when zoomed in)" : ""}
+          </span>
         </div>
       </div>
 
       {selected && (
         <PointDetailPanel
           key={selected.id}
-          point={selected}
-          usage={usage[selected.id] ?? []}
-          nearby={nearbyIds.map((id) => points.find((p) => p.id === id)!).filter(Boolean)}
+          summary={selected}
+          detail={details.detail}
+          loading={details.loading}
+          error={details.error}
+          onRetry={details.retry}
+          nearby={nearbyIds.map((id) => byId.get(id)).filter((p): p is MapPoint => !!p)}
           index={Math.max(0, index)}
           total={visible.length}
           onSelect={(id) => select(id, true)}

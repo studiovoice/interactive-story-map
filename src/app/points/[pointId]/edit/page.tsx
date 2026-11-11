@@ -4,7 +4,7 @@ import { Suspense } from "react"
 import { PageContainer, PageHeader } from "@/components/page-header"
 import { PageLoading } from "@/components/page-loading"
 import { PointForm } from "@/components/points/point-form"
-import { getPoint, getPoints } from "@/lib/queries"
+import { getPoint, getMapPoints } from "@/lib/queries"
 import { FreshOnNavigate } from "@/components/fresh-on-navigate"
 
 export async function generateMetadata({ params }: PageProps<"/points/[pointId]/edit">): Promise<Metadata> {
@@ -25,7 +25,7 @@ export default function EditPointPage({ params }: PageProps<"/points/[pointId]/e
 
 async function EditPoint({ params }: Pick<PageProps<"/points/[pointId]/edit">, "params">) {
   const { pointId } = await params
-  const [point, points] = await Promise.all([getPoint(pointId), getPoints()])
+  const [point, points] = await Promise.all([getPoint(pointId), getMapPoints()])
   if (!point) notFound()
   return (
     <FreshOnNavigate>

@@ -1,7 +1,7 @@
 import { Suspense } from "react"
 import { PageLoading } from "@/components/page-loading"
 import { ExploreMap } from "@/components/points/explore-map"
-import { getPointUsage, getPoints } from "@/lib/queries"
+import { getMapPoints } from "@/lib/queries"
 
 export default function ExplorePage() {
   return (
@@ -12,6 +12,6 @@ export default function ExplorePage() {
 }
 
 async function Explore() {
-  const [points, usage] = await Promise.all([getPoints(), getPointUsage()])
-  return <ExploreMap points={points} usage={usage} />
+  const points = await getMapPoints()
+  return <ExploreMap points={points} />
 }
