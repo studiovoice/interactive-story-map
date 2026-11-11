@@ -51,6 +51,7 @@ export function MapView({
   cursor,
   maxPitch = 70,
   navigation = true,
+  projection = "globe",
 }: {
   /** Read once, when the map is created. A function is called then (client-side, after hydration). */
   initialView: InitialView | (() => InitialView)
@@ -62,6 +63,8 @@ export function MapView({
   cursor?: string
   maxPitch?: number
   navigation?: boolean
+  /** "globe" curves the map when zoomed out (flat again from city level); "mercator" is always flat. */
+  projection?: "globe" | "mercator"
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [ctx, setCtx] = useState<MapContextValue | null>(null)
@@ -84,6 +87,7 @@ export function MapView({
   })
 
   const initialViewRef = useRef(initialView)
+  const projectionRef = useRef(projection)
   const darkRef = useRef(dark)
 
   useEffect(() => {
@@ -130,6 +134,8 @@ export function MapView({
             .forEach((el) => el.classList.remove("maplibregl-compact-show"))
         })
         map.on("style.load", () => {
+          // The projection belongs to the style, so set it again after every style (theme) swap.
+          m.setProjection({ type: projectionRef.current })
           setCtx((c) => (c ? { ...c, styleKey: c.styleKey + 1, dark: darkRef.current } : c))
         })
         ro = new ResizeObserver(() => m.resize())
@@ -154,6 +160,11 @@ export function MapView({
   useEffect(() => {
     if (ctx) ctx.map.getCanvas().style.cursor = cursor ?? ""
   }, [cursor, ctx])
+
+  useEffect(() => {
+    projectionRef.current = projection
+    if (ctx?.map.isStyleLoaded()) ctx.map.setProjection({ type: projection })
+  }, [projection, ctx])
 
   return (
     <div className={cn("relative overflow-hidden bg-muted", className)}>
