@@ -52,7 +52,8 @@ export function MapView({
   maxPitch = 70,
   navigation = true,
 }: {
-  initialView: InitialView
+  /** Read once, when the map is created. A function is called then (client-side, after hydration). */
+  initialView: InitialView | (() => InitialView)
   className?: string
   /** Markers and layers. Rendered as soon as the map exists (layers wait for the style). */
   children?: ReactNode
@@ -92,7 +93,8 @@ export function MapView({
     import("maplibre-gl")
       .then((lib) => {
         if (cancelled || !containerRef.current) return
-        const view = initialViewRef.current
+        const iv = initialViewRef.current
+        const view = typeof iv === "function" ? iv() : iv
         map = new lib.Map({
           container: containerRef.current,
           style: darkRef.current ? MAP_STYLES.dark : MAP_STYLES.light,
