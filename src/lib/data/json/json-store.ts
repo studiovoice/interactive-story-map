@@ -8,13 +8,16 @@ import {
   type Chapter,
   type ChapterPoint,
   type CollectionSummary,
+  type MapPoint,
   type Point,
   type PointUsage,
   type StoryDetail,
   type StorySummary,
 } from "@/lib/domain/schema"
 import { newId } from "@/lib/data/ids"
+import { distance } from "@/lib/geo"
 import { normalizePointLocation } from "@/lib/location"
+import { matchesQuery } from "@/lib/points/match"
 import { NotFoundError, type DataStore } from "@/lib/data/repository"
 import { readDb, writeDb, type DbFile } from "./file-db"
 
@@ -27,6 +30,40 @@ function must<T>(value: T | undefined, entity: string, id: string): T {
 }
 
 /* ───────────── read-model helpers (these become joins in SQL) ───────────── */
+
+/** Stories/chapters using each point (or only `onlyId`), keyed by point id. */
+function usageMap(db: DbFile, onlyId?: string): Record<string, PointUsage[]> {
+  const stories = new Map(db.stories.map((s) => [s.id, s]))
+  const collections = new Map(db.collections.map((c) => [c.id, c]))
+  const chapters = new Map(db.chapters.map((c) => [c.id, c]))
+  const chapterIndex = new Map<string, number>()
+  for (const s of db.stories) {
+    db.chapters
+      .filter((c) => c.storyId === s.id)
+      .sort(byPosition)
+      .forEach((c, i) => chapterIndex.set(c.id, i))
+  }
+  const out: Record<string, PointUsage[]> = {}
+  for (const cp of db.chapterPoints) {
+    if (onlyId && cp.pointId !== onlyId) continue
+    const chapter = chapters.get(cp.chapterId)
+    const story = chapter && stories.get(chapter.storyId)
+    const collection = story && collections.get(story.collectionId)
+    if (!chapter || !story || !collection) continue
+    ;(out[cp.pointId] ??= []).push({
+      storyId: story.id,
+      storyTitle: story.title,
+      storyStatus: story.status,
+      collectionId: collection.id,
+      collectionTitle: collection.title,
+      chapterId: chapter.id,
+      chapterIndex: chapterIndex.get(chapter.id) ?? 0,
+      chapterTitle: chapter.title,
+    })
+  }
+  return out
+}
+
 
 function storyDetail(db: DbFile, storyId: string): StoryDetail | null {
   const story = db.stories.find((s) => s.id === storyId)
@@ -106,35 +143,41 @@ export function createJsonStore(): DataStore {
         })
       },
       async usage() {
+        return usageMap(await readDb())
+      },
+      async mapList() {
         const db = await readDb()
-        const stories = new Map(db.stories.map((s) => [s.id, s]))
-        const collections = new Map(db.collections.map((c) => [c.id, c]))
-        const chapters = new Map(db.chapters.map((c) => [c.id, c]))
-        const chapterIndex = new Map<string, number>()
-        for (const s of db.stories) {
-          db.chapters
-            .filter((c) => c.storyId === s.id)
-            .sort(byPosition)
-            .forEach((c, i) => chapterIndex.set(c.id, i))
+        const used = new Set(db.chapterPoints.map((cp) => cp.pointId))
+        return db.points.map(
+          (p): MapPoint => ({
+            id: p.id,
+            title: p.title,
+            kind: p.kind,
+            location: p.location,
+            locationPrecision: p.locationPrecision,
+            locationRadiusM: p.locationRadiusM,
+            inStory: used.has(p.id),
+          }),
+        )
+      },
+      async detail(id) {
+        const db = await readDb()
+        const point = db.points.find((p) => p.id === id)
+        if (!point) return null
+        return { point, usage: usageMap(db, id)[id] ?? [] }
+      },
+      async search({ q, near, limit = 5, maxIds = 5000 }) {
+        const db = await readDb()
+        const matches = db.points.filter((p) => matchesQuery(p, q))
+        if (near) {
+          const d = new Map(matches.map((p) => [p.id, distance(near, p.location)]))
+          matches.sort((a, b) => d.get(a.id)! - d.get(b.id)!)
         }
-        const out: Record<string, PointUsage[]> = {}
-        for (const cp of db.chapterPoints) {
-          const chapter = chapters.get(cp.chapterId)
-          const story = chapter && stories.get(chapter.storyId)
-          const collection = story && collections.get(story.collectionId)
-          if (!chapter || !story || !collection) continue
-          ;(out[cp.pointId] ??= []).push({
-            storyId: story.id,
-            storyTitle: story.title,
-            storyStatus: story.status,
-            collectionId: collection.id,
-            collectionTitle: collection.title,
-            chapterId: chapter.id,
-            chapterIndex: chapterIndex.get(chapter.id) ?? 0,
-            chapterTitle: chapter.title,
-          })
+        return {
+          ids: matches.slice(0, maxIds).map((p) => p.id),
+          total: matches.length,
+          top: matches.slice(0, limit),
         }
-        return out
       },
     },
 

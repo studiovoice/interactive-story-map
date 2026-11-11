@@ -19,7 +19,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { deletePoint } from "@/lib/actions"
 import type { Point, PointUsage } from "@/lib/domain/schema"
 import { formatCaptured } from "@/lib/time"
-import { matchesQuery } from "./explore-map"
+import { matchesQuery } from "@/lib/points/match"
 import { PointMedia } from "./point-media"
 
 const KIND_LABEL = { photo: "Photo", video: "Video", audio: "Audio", note: "Note" } as const

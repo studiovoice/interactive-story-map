@@ -20,6 +20,12 @@ export const getPoint = cache(async (id: string) => {
   return store.points.get(id)
 })
 
+/** Lightweight rows for maps that show many points (see MapPoint). */
+export const getMapPoints = cache(async () => {
+  await connection()
+  return store.points.mapList()
+})
+
 export const getPointUsage = cache(async () => {
   await connection()
   return store.points.usage()

@@ -8,6 +8,10 @@
 import type {
   ChapterDraft,
   Collection,
+  LngLat,
+  MapPoint,
+  PointDetail,
+  PointSearchResult,
   CollectionInput,
   CollectionSummary,
   Point,
@@ -28,6 +32,25 @@ export interface PointRepository {
   delete(id: string): Promise<void>
   /** Stories/chapters that use each point, keyed by point id. */
   usage(): Promise<Record<string, PointUsage[]>>
+  /**
+   * Lightweight rows for drawing points on a map.
+   * Stage 2 (see README): takes a map tile / bbox and returns only the points (or clusters) in it.
+   */
+  mapList(): Promise<MapPoint[]>
+  /** One point plus the stories that use it, for the details panel. */
+  detail(id: string): Promise<PointDetail | null>
+  /** Text search over title, description, place name and tags. */
+  search(opts: PointSearchOptions): Promise<PointSearchResult>
+}
+
+export type PointSearchOptions = {
+  q: string
+  /** Rank `top` by distance from here (usually the map center). */
+  near?: LngLat
+  /** How many full points to return in `top`. */
+  limit?: number
+  /** Max ids to return. */
+  maxIds?: number
 }
 
 export interface CollectionRepository {

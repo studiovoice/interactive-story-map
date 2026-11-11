@@ -95,3 +95,12 @@ export const lineFeature = (coordinates: LngLat[]) => ({
   properties: {},
   geometry: { type: "LineString" as const, coordinates },
 })
+
+/** Reads `lat` and `lng` query params; undefined unless both are present and valid. */
+export function lngLatFromParams(sp: URLSearchParams): LngLat | undefined {
+  if (!sp.has("lat") || !sp.has("lng")) return undefined
+  const lat = Number(sp.get("lat"))
+  const lng = Number(sp.get("lng"))
+  const ok = Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180
+  return ok ? [lng, lat] : undefined
+}

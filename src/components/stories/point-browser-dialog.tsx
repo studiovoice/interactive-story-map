@@ -2,7 +2,7 @@
 
 import { CheckIcon, PlusIcon, SearchIcon } from "lucide-react"
 import { useMemo, useState } from "react"
-import { matchesQuery } from "@/components/points/explore-map"
+import { matchesQuery } from "@/lib/points/match"
 import { PointMedia } from "@/components/points/point-media"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"

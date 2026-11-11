@@ -223,3 +223,24 @@ export type PointUsage = {
   chapterIndex: number
   chapterTitle: string
 }
+
+/**
+ * The few fields the map needs to draw a point. Pages that show many points send these
+ * instead of full points; details are loaded when one is opened (`PointDetail`).
+ */
+export type MapPoint = Pick<Point, "id" | "title" | "kind" | "location" | "locationPrecision" | "locationRadiusM"> & {
+  /** Used by at least one story's chapter. */
+  inStory: boolean
+}
+
+/** Everything the point details panel shows. */
+export type PointDetail = { point: Point; usage: PointUsage[] }
+
+export type PointSearchResult = {
+  /** Every matching point id (capped), for filtering the map. */
+  ids: string[]
+  /** How many points matched in total. */
+  total: number
+  /** The best few matches in full, closest to `near` first. */
+  top: Point[]
+}
