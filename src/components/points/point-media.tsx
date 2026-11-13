@@ -1,6 +1,6 @@
 import { FileTextIcon, MicIcon, PlayIcon, StickyNoteIcon } from "lucide-react"
 import type { MediaAsset, Point } from "@/lib/domain/schema"
-import { mediaUrl } from "@/lib/storage"
+import { mediaUrl } from "@/lib/storage/client"
 import { parseLocal, timeOfDay } from "@/lib/time"
 import { cn } from "@/lib/utils"
 

@@ -38,7 +38,7 @@ export type MediaKind = z.infer<typeof mediaKindSchema>
  * A file attached to a point. `source` says where the bytes live:
  * - `external`: a plain URL (works today, no storage needed)
  * - `storage`: an object in our bucket (S3/MinIO), addressed by `storageKey`;
- *   resolve it to a URL through `getStorage().getUrl(key)`.
+ *   resolve it to a URL with `mediaUrl()` from `@/lib/storage/client`.
  */
 export const mediaAssetSchema = z.object({
   id: idSchema,
