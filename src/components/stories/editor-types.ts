@@ -1,4 +1,5 @@
 import type { Camera, ChapterConnection, ChapterDraft, LngLat, StoryDetail, StoryStatus } from "@/lib/domain/schema"
+import { newId } from "@/lib/ids"
 
 export type EditorChapter = {
   id: string
@@ -33,4 +34,4 @@ export function stateFromStory(story: StoryDetail): EditorState {
 
 export const toDrafts = (chapters: EditorChapter[]): ChapterDraft[] => chapters.map((c) => ({ ...c }))
 
-export const newChapterId = () => `ch_${crypto.randomUUID().replaceAll("-", "").slice(0, 12)}`
+export const newChapterId = () => newId("ch")

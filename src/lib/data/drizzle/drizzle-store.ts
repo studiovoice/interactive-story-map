@@ -19,7 +19,7 @@ import {
   type StoryDetail,
   type StorySummary,
 } from "@/lib/domain/schema"
-import { newId } from "@/lib/data/ids"
+import { newId } from "@/lib/ids"
 import { normalizePointLocation } from "@/lib/location"
 import { NotFoundError, type DataStore } from "@/lib/data/repository"
 import {

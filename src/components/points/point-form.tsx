@@ -10,6 +10,7 @@ import {
   Trash2Icon,
   UploadIcon,
 } from "lucide-react"
+import { nanoid } from "nanoid"
 import { useRouter } from "next/navigation"
 import { useRef, useState, useTransition } from "react"
 import { toast } from "sonner"
@@ -31,6 +32,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { createMediaUpload, createPoint, deletePoint, updatePoint } from "@/lib/actions"
+import { newId } from "@/lib/ids"
 import {
   mediaKinds,
   pointKinds,
@@ -124,7 +126,7 @@ export function PointForm({
   /** Upload straight to the bucket: ask the server for a presigned PUT, then send the file. */
   async function uploadFiles(files: File[]) {
     for (const file of files) {
-      const tempId = crypto.randomUUID()
+      const tempId = nanoid() // only keys the "Uploading…" row; never saved
       setUploading((u) => [...u, { id: tempId, name: file.name }])
       try {
         const res = await createMediaUpload({ fileName: file.name, mimeType: file.type, size: file.size })
@@ -392,7 +394,7 @@ export function PointForm({
                   setMedia((rows) => [
                     ...rows,
                     {
-                      id: `med_${crypto.randomUUID().slice(0, 12)}`,
+                      id: newId("med"),
                       kind: DEFAULT_MEDIA_KIND[kind],
                       source: "external",
                     },
