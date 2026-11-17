@@ -14,7 +14,7 @@ import {
   type StoryDetail,
   type StorySummary,
 } from "@/lib/domain/schema"
-import { newId } from "@/lib/data/ids"
+import { newId } from "@/lib/ids"
 import { distance } from "@/lib/geo"
 import { normalizePointLocation } from "@/lib/location"
 import { matchesQuery } from "@/lib/points/match"

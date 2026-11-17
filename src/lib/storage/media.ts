@@ -1,7 +1,7 @@
 import "server-only"
 
 import { z } from "zod"
-import { newId } from "@/lib/data/ids"
+import { newId } from "@/lib/ids"
 import type { MediaAsset, MediaKind } from "@/lib/domain/schema"
 import type { PresignedUpload, StorageProvider } from "./index"
 import { mediaIdFromKey, mediaKindForMime, storageKeyFor } from "./rules"
