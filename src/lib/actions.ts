@@ -10,6 +10,16 @@
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { store, NotFoundError } from "@/lib/data"
+import { getStorage, mediaMaxBytes } from "@/lib/storage"
+import {
+  createMediaUpload as presignMediaUpload,
+  deleteStoredMedia,
+  MediaError,
+  removedStorageKeys,
+  verifyStoredMedia,
+  type MediaUpload,
+  type MediaUploadRequest,
+} from "@/lib/storage/media"
 import {
   chapterDraftSchema,
   collectionInputSchema,
@@ -28,10 +38,10 @@ import {
 export type ActionResult<T = undefined> =
   { ok: true; data: T } | { ok: false; error: string; fieldErrors?: Record<string, string[]> }
 
-async function run<T>(fn: () => Promise<T>): Promise<ActionResult<T>> {
+async function run<T>(fn: () => Promise<T>, { revalidate = true } = {}): Promise<ActionResult<T>> {
   try {
     const data = await fn()
-    revalidatePath("/", "layout")
+    if (revalidate) revalidatePath("/", "layout")
     return { ok: true, data }
   } catch (err) {
     if (err instanceof z.ZodError) {
@@ -41,7 +51,7 @@ async function run<T>(fn: () => Promise<T>): Promise<ActionResult<T>> {
         fieldErrors: z.flattenError(err).fieldErrors as Record<string, string[]>,
       }
     }
-    if (err instanceof NotFoundError) return { ok: false, error: err.message }
+    if (err instanceof NotFoundError || err instanceof MediaError) return { ok: false, error: err.message }
     console.error(err)
     return { ok: false, error: "Something went wrong. Please try again." }
   }
@@ -50,18 +60,45 @@ async function run<T>(fn: () => Promise<T>): Promise<ActionResult<T>> {
 /* ───────────── points ───────────── */
 
 export async function createPoint(input: PointInput): Promise<ActionResult<Point>> {
-  return run(() => store.points.create(pointInputSchema.parse(input)))
+  return run(async () => {
+    const data = pointInputSchema.parse(input)
+    const media = await verifyStoredMedia(getStorage(), mediaMaxBytes(), data.media)
+    return store.points.create({ ...data, media })
+  })
 }
 
 export async function updatePoint(id: string, input: PointInput): Promise<ActionResult<Point>> {
-  return run(() => store.points.update(id, pointInputSchema.parse(input)))
+  return run(async () => {
+    const data = pointInputSchema.parse(input)
+    const previous = await store.points.get(id)
+    if (!previous) throw new NotFoundError("Point", id)
+    const storage = getStorage()
+    const media = await verifyStoredMedia(storage, mediaMaxBytes(), data.media, previous.media)
+    const point = await store.points.update(id, { ...data, media })
+    // Only after the point no longer references them.
+    await deleteStoredMedia(storage, removedStorageKeys(previous.media, point.media))
+    return point
+  })
 }
 
 export async function deletePoint(id: string): Promise<ActionResult> {
   return run(async () => {
+    const previous = await store.points.get(id)
     await store.points.delete(id)
+    if (previous) await deleteStoredMedia(getStorage(), removedStorageKeys(previous.media, []))
     return undefined
   })
+}
+
+/* ───────────── media uploads ───────────── */
+
+/**
+ * Step 1 of an upload: check the file and get a presigned PUT. The browser then PUTs the file
+ * to `upload.url` and adds `asset` to the point; saving the point verifies the stored file.
+ */
+export async function createMediaUpload(input: MediaUploadRequest): Promise<ActionResult<MediaUpload>> {
+  // Nothing changes until the point is saved, so no revalidation.
+  return run(() => presignMediaUpload(getStorage(), mediaMaxBytes(), input), { revalidate: false })
 }
 
 /* ───────────── collections ───────────── */

@@ -6,7 +6,7 @@ import { store } from "@/lib/data"
 
 /*
  * Read helpers for Server Components. `connection()` marks the read as request-time
- * (the JSON file, and later Postgres, must never be baked into a prerender);
+ * (the JSON file or Postgres must never be baked into a prerender);
  * `cache()` dedupes calls within one request.
  */
 

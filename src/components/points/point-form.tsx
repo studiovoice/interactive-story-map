@@ -1,8 +1,18 @@
 "use client"
 
-import { CircleDashedIcon, MapPinIcon, PlusIcon, ShieldIcon, Trash2Icon, UploadIcon } from "lucide-react"
+import {
+  CircleDashedIcon,
+  CloudIcon,
+  LoaderIcon,
+  MapPinIcon,
+  PlusIcon,
+  ShieldIcon,
+  Trash2Icon,
+  UploadIcon,
+} from "lucide-react"
+import { nanoid } from "nanoid"
 import { useRouter } from "next/navigation"
-import { useState, useTransition } from "react"
+import { useRef, useState, useTransition } from "react"
 import { toast } from "sonner"
 import { ConfirmDelete } from "@/components/confirm-delete"
 import { Button } from "@/components/ui/button"
@@ -21,7 +31,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { createPoint, deletePoint, updatePoint } from "@/lib/actions"
+import { createMediaUpload, createPoint, deletePoint, updatePoint } from "@/lib/actions"
+import { newId } from "@/lib/ids"
 import {
   mediaKinds,
   pointKinds,
@@ -41,7 +52,8 @@ import {
   MIN_OBSCURED_RADIUS,
   RADIUS_PRESETS,
 } from "@/lib/location"
-import { getStorage } from "@/lib/storage"
+import { uploadsEnabled } from "@/lib/storage/client"
+import { ACCEPT_ATTRIBUTE } from "@/lib/storage/rules"
 import { LocationPicker } from "./location-picker"
 import { PointMedia } from "./point-media"
 
@@ -55,6 +67,24 @@ const DEFAULT_MEDIA_KIND: Record<PointKind, MediaKind> = {
 }
 
 type MediaRow = MediaAsset & { durationText?: string }
+
+/** Length of a video/audio file in whole seconds, read from its metadata in the browser. */
+function readDuration(file: File, kind: "video" | "audio"): Promise<number | undefined> {
+  return new Promise((resolve) => {
+    const el = document.createElement(kind)
+    const url = URL.createObjectURL(file)
+    const done = (value?: number) => {
+      clearTimeout(timer)
+      URL.revokeObjectURL(url)
+      resolve(value)
+    }
+    const timer = setTimeout(() => done(), 10_000)
+    el.preload = "metadata"
+    el.onloadedmetadata = () => done(Number.isFinite(el.duration) ? Math.round(el.duration) : undefined)
+    el.onerror = () => done()
+    el.src = url
+  })
+}
 
 export function PointForm({
   point,
@@ -90,7 +120,34 @@ export function PointForm({
   const [media, setMedia] = useState<MediaRow[]>(
     point?.media.map((m) => ({ ...m, durationText: m.durationSec?.toString() })) ?? [],
   )
-  const storage = getStorage()
+  const fileInput = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState<{ id: string; name: string }[]>([])
+
+  /** Upload straight to the bucket: ask the server for a presigned PUT, then send the file. */
+  async function uploadFiles(files: File[]) {
+    for (const file of files) {
+      const tempId = nanoid() // only keys the "Uploading…" row; never saved
+      setUploading((u) => [...u, { id: tempId, name: file.name }])
+      try {
+        const res = await createMediaUpload({ fileName: file.name, mimeType: file.type, size: file.size })
+        if (!res.ok) {
+          toast.error(res.error)
+          continue
+        }
+        const { asset, upload } = res.data
+        const put = await fetch(upload.url, { method: upload.method, headers: upload.headers, body: file })
+        if (!put.ok) throw new Error(`Upload failed with ${put.status}`)
+        const durationSec =
+          asset.kind === "video" || asset.kind === "audio" ? await readDuration(file, asset.kind) : undefined
+        setMedia((rows) => [...rows, { ...asset, durationSec, durationText: durationSec?.toString() }])
+      } catch (err) {
+        console.error(err)
+        toast.error(`Couldn't upload “${file.name}”. Please try again.`)
+      } finally {
+        setUploading((u) => u.filter((x) => x.id !== tempId))
+      }
+    }
+  }
 
   const draftPoint: Point = {
     id: point?.id ?? "preview",
@@ -105,7 +162,7 @@ export function PointForm({
     timePrecision: approximate ? "approximate" : "exact",
     tags: [],
     contributor,
-    media: media.filter((m) => m.url),
+    media: media.filter((m) => m.url || m.storageKey),
     createdAt: "",
     updatedAt: "",
   }
@@ -144,7 +201,7 @@ export function PointForm({
       ],
       contributor,
       media: media
-        .filter((m) => m.url?.trim() || m.fileName?.trim())
+        .filter((m) => (m.source === "storage" ? m.storageKey : m.url?.trim() || m.fileName?.trim()))
         .map(({ durationText, ...m }) => ({
           ...m,
           url: m.url?.trim() || undefined,
@@ -263,12 +320,18 @@ export function PointForm({
         <FieldSet>
           <FieldLegend variant="label">Media</FieldLegend>
           <FieldDescription>
-            Link to files by URL for now. Points without media show a generated placeholder.
+            {uploadsEnabled ? "Upload files or link to them by URL." : "Link to files by URL."} Points without media
+            show a generated placeholder.
           </FieldDescription>
           <div className="flex flex-col gap-2">
             {media.map((m, i) => (
               <div key={m.id} className="grid grid-cols-[7.5rem_1fr_auto] gap-2 rounded-lg border p-2">
-                <Select value={m.kind} onValueChange={(v) => updateMedia(i, { kind: v as MediaKind })}>
+                <Select
+                  value={m.kind}
+                  onValueChange={(v) => updateMedia(i, { kind: v as MediaKind })}
+                  // An uploaded file's type is read from the file itself.
+                  disabled={m.source === "storage"}
+                >
                   <SelectTrigger className="w-full" aria-label="Media type">
                     <SelectValue />
                   </SelectTrigger>
@@ -280,13 +343,20 @@ export function PointForm({
                     ))}
                   </SelectContent>
                 </Select>
-                <Input
-                  value={m.url ?? ""}
-                  onChange={(e) => updateMedia(i, { url: e.target.value, source: "external" })}
-                  placeholder="https://…"
-                  aria-label="Media URL"
-                  type="url"
-                />
+                {m.source === "storage" ? (
+                  <div className="flex min-w-0 items-center gap-2 rounded-md border bg-muted/40 px-3 text-sm text-muted-foreground">
+                    <CloudIcon className="size-4 shrink-0" />
+                    <span className="truncate">Uploaded file</span>
+                  </div>
+                ) : (
+                  <Input
+                    value={m.url ?? ""}
+                    onChange={(e) => updateMedia(i, { url: e.target.value, source: "external" })}
+                    placeholder="https://…"
+                    aria-label="Media URL"
+                    type="url"
+                  />
+                )}
                 <Button
                   type="button"
                   variant="ghost"
@@ -324,7 +394,7 @@ export function PointForm({
                   setMedia((rows) => [
                     ...rows,
                     {
-                      id: `med_${crypto.randomUUID().slice(0, 12)}`,
+                      id: newId("med"),
                       kind: DEFAULT_MEDIA_KIND[kind],
                       source: "external",
                     },
@@ -333,18 +403,44 @@ export function PointForm({
               >
                 <PlusIcon /> Add media by URL
               </Button>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  {/* span: disabled buttons don't fire pointer events for the tooltip */}
-                  <span tabIndex={storage.canUpload ? -1 : 0}>
-                    <Button type="button" variant="outline" size="sm" disabled={!storage.canUpload}>
-                      <UploadIcon /> Upload file
-                    </Button>
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>File uploads arrive with object storage (S3/MinIO).</TooltipContent>
-              </Tooltip>
+              {uploadsEnabled ? (
+                <>
+                  <Button type="button" variant="outline" size="sm" onClick={() => fileInput.current?.click()}>
+                    <UploadIcon /> Upload files
+                  </Button>
+                  <input
+                    ref={fileInput}
+                    type="file"
+                    multiple
+                    accept={ACCEPT_ATTRIBUTE}
+                    className="hidden"
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files ?? [])
+                      e.target.value = "" // so picking the same file again still fires
+                      void uploadFiles(files)
+                    }}
+                  />
+                </>
+              ) : (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    {/* span: disabled buttons don't fire pointer events for the tooltip */}
+                    <span tabIndex={0}>
+                      <Button type="button" variant="outline" size="sm" disabled>
+                        <UploadIcon /> Upload files
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>Uploads are off. Set NEXT_PUBLIC_STORAGE_DRIVER=s3 to turn them on.</TooltipContent>
+                </Tooltip>
+              )}
             </div>
+            {uploading.map((u) => (
+              <div key={u.id} className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
+                <LoaderIcon className="size-4 animate-spin" />
+                <span className="truncate">Uploading {u.name}…</span>
+              </div>
+            ))}
           </div>
         </FieldSet>
       </FieldGroup>
@@ -462,8 +558,8 @@ export function PointForm({
           <Button type="button" variant="ghost" onClick={() => router.back()} disabled={pending}>
             Cancel
           </Button>
-          <Button type="submit" disabled={pending}>
-            {pending ? "Saving…" : point ? "Save changes" : "Create point"}
+          <Button type="submit" disabled={pending || uploading.length > 0}>
+            {pending ? "Saving…" : uploading.length ? "Uploading…" : point ? "Save changes" : "Create point"}
           </Button>
         </div>
       </div>
