@@ -12,6 +12,8 @@ name: story-map
 services:
   db:
     image: postgis/postgis:18-3.7
+    # postgis/postgis is only published for amd64; on Apple Silicon it runs under emulation.
+    platform: linux/amd64
     environment:
       POSTGRES_USER: story
       POSTGRES_PASSWORD: story
