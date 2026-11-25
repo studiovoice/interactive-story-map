@@ -13,6 +13,7 @@ import {
   type ChapterWithPoints,
   type CollectionSummary,
   type LngLat,
+  type MediaKind,
   type MapPoint,
   type Point,
   type PointUsage,
@@ -180,7 +181,7 @@ export function createDrizzleStore(db: Db): DataStore {
           .select({
             id: points.id,
             title: points.title,
-            kind: points.kind,
+            mediaKinds: sql<MediaKind[]>`array(select e->>'kind' from jsonb_array_elements(${points.media}) with ordinality as t(e, i) order by i)`,
             location: points.location,
             locationPrecision: points.locationPrecision,
             locationRadiusM: points.locationRadiusM,

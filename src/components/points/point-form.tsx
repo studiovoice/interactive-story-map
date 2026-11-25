@@ -35,7 +35,6 @@ import { createMediaUpload, createPoint, deletePoint, updatePoint } from "@/lib/
 import { newId } from "@/lib/ids"
 import {
   mediaKinds,
-  pointKinds,
   type LngLat,
   type LocationPrecision,
   type MapPoint,
@@ -43,7 +42,6 @@ import {
   type MediaKind,
   type Point,
   type PointInput,
-  type PointKind,
 } from "@/lib/domain/schema"
 import {
   DEFAULT_APPROX_RADIUS,
@@ -57,14 +55,7 @@ import { ACCEPT_ATTRIBUTE } from "@/lib/storage/rules"
 import { LocationPicker } from "./location-picker"
 import { PointMedia } from "./point-media"
 
-const KIND_LABEL: Record<PointKind, string> = { photo: "Photo", video: "Video", audio: "Audio", note: "Note" }
 const MEDIA_LABEL: Record<MediaKind, string> = { image: "Image", video: "Video", audio: "Audio", document: "Document" }
-const DEFAULT_MEDIA_KIND: Record<PointKind, MediaKind> = {
-  photo: "image",
-  video: "video",
-  audio: "audio",
-  note: "document",
-}
 
 /** `localName`: the picked file's name, shown in the form so rows can be told apart. Never saved. */
 type MediaRow = MediaAsset & { durationText?: string; localName?: string }
@@ -103,7 +94,6 @@ export function PointForm({
 
   const [title, setTitle] = useState(point?.title ?? "")
   const [description, setDescription] = useState(point?.description ?? "")
-  const [kind, setKind] = useState<PointKind>(point?.kind ?? "photo")
   const [location, setLocation] = useState<LngLat | null>(point?.location ?? initialLocation ?? null)
   const [precision, setPrecision] = useState<LocationPrecision>(point?.locationPrecision ?? "exact")
   const [radius, setRadius] = useState<number>(point?.locationRadiusM ?? DEFAULT_APPROX_RADIUS)
@@ -157,7 +147,6 @@ export function PointForm({
     id: point?.id ?? "preview",
     title,
     description,
-    kind,
     location: location ?? [0, 0],
     locationPrecision: precision,
     locationRadiusM: precision === "exact" ? null : radius,
@@ -188,7 +177,6 @@ export function PointForm({
     const input: PointInput = {
       title,
       description,
-      kind,
       location,
       locationPrecision: precision,
       locationRadiusM: precision === "exact" ? null : radius,
@@ -256,32 +244,15 @@ export function PointForm({
           />
         </Field>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field>
-            <FieldLabel htmlFor="kind">Type</FieldLabel>
-            <Select value={kind} onValueChange={(v) => setKind(v as PointKind)}>
-              <SelectTrigger id="kind" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {pointKinds.map((k) => (
-                  <SelectItem key={k} value={k}>
-                    {KIND_LABEL[k]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="contributor">Uploaded by</FieldLabel>
-            <Input
-              id="contributor"
-              value={contributor}
-              onChange={(e) => setContributor(e.target.value)}
-              placeholder="Anonymous contributor"
-            />
-          </Field>
-        </div>
+        <Field>
+          <FieldLabel htmlFor="contributor">Uploaded by</FieldLabel>
+          <Input
+            id="contributor"
+            value={contributor}
+            onChange={(e) => setContributor(e.target.value)}
+            placeholder="Anonymous contributor"
+          />
+        </Field>
 
         <FieldSet>
           <FieldLegend variant="label">When</FieldLegend>
@@ -403,7 +374,7 @@ export function PointForm({
                     ...rows,
                     {
                       id: newId("med"),
-                      kind: DEFAULT_MEDIA_KIND[kind],
+                      kind: "image",
                       source: "external",
                     },
                   ])

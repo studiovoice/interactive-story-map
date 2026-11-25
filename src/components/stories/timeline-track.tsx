@@ -1,6 +1,7 @@
 "use client"
 
 import { useRef, useState } from "react"
+import { hasVideo } from "@/lib/points/media"
 import { type Timeline, chapterIndexAt, gapAt, timeAt } from "@/lib/story/timeline"
 import { formatTime } from "@/lib/time"
 import { cn } from "@/lib/utils"
@@ -157,7 +158,7 @@ export function TimelineTrack({
       {/* Point ticks */}
       {timeline.items.map((it) => {
         const done = p >= it.pos
-        const video = it.point.kind === "video"
+        const video = hasVideo(it.point.media)
         return (
           <button
             key={it.index}

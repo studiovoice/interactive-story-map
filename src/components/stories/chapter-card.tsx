@@ -25,6 +25,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { hasVideo } from "@/lib/points/media"
 import type { Point } from "@/lib/domain/schema"
 import { measure } from "@/lib/geo"
 import { compareCaptured, formatCaptured } from "@/lib/time"
@@ -295,7 +296,7 @@ export function ChapterCard({
                     <PointMedia point={cp.point} badge={false} className="h-8 w-11 shrink-0 rounded-[5px]" />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1 truncate text-xs font-medium">
-                        {cp.point.kind === "video" && <VideoIcon className="size-3 shrink-0 text-muted-foreground" />}
+                        {hasVideo(cp.point.media) && <VideoIcon className="size-3 shrink-0 text-muted-foreground" />}
                         <span className="truncate">{cp.point.title}</span>
                       </div>
                       <div className="truncate text-[11px] text-muted-foreground">

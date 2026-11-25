@@ -1,5 +1,6 @@
-import { FileTextIcon, MicIcon, PlayIcon, StickyNoteIcon } from "lucide-react"
+import { FileTextIcon, MicIcon, PlayIcon } from "lucide-react"
 import type { MediaAsset, Point } from "@/lib/domain/schema"
+import { coverMedia } from "@/lib/points/media"
 import { mediaUrl } from "@/lib/storage/client"
 import { parseLocal, timeOfDay } from "@/lib/time"
 import { cn } from "@/lib/utils"
@@ -77,18 +78,14 @@ export function PointScene({ point, className }: { point: Pick<Point, "id" | "ca
   )
 }
 
-export function primaryMedia(point: Point): MediaAsset | undefined {
-  return point.media.find((m) => m.kind !== "document")
-}
-
 export function formatDurationSec(sec?: number) {
   if (sec === undefined) return null
   return `${Math.floor(sec / 60)}:${String(Math.round(sec % 60)).padStart(2, "0")}`
 }
 
 /**
- * The point's main visual. Shows the real image/video when it has a URL,
- * otherwise the generated placeholder scene.
+ * The point's cover (see `coverMedia`). Shows the real image/video when it has a URL; a point
+ * with no files gets the generated placeholder scene.
  */
 export function PointMedia({
   point,
@@ -103,7 +100,7 @@ export function PointMedia({
   /** The "Photo"/"Video" label and play icon. Off for small thumbnails. */
   badge?: boolean
 }) {
-  const media = primaryMedia(point)
+  const media = coverMedia(point.media)
   const url = media ? mediaUrl(media) : null
   const duration = formatDurationSec(media?.durationSec)
 
@@ -119,13 +116,14 @@ export function PointMedia({
         <audio src={url} controls className="w-full" />
       </span>
     )
-  } else if (point.kind === "note") {
+  } else if (!media && point.media.length) {
+    // Only documents.
     content = (
       <span className="grid size-full place-items-center bg-muted text-muted-foreground">
-        <StickyNoteIcon className="size-6" />
+        <FileTextIcon className="size-6" />
       </span>
     )
-  } else if (point.kind === "audio") {
+  } else if (media?.kind === "audio") {
     content = (
       <span className="grid size-full place-items-center bg-muted text-muted-foreground">
         <MicIcon className="size-6" />
@@ -135,7 +133,7 @@ export function PointMedia({
     content = <PointScene point={point} />
   }
 
-  const isVideo = point.kind === "video"
+  const isVideo = media?.kind === "video"
   const showPlay = badge && isVideo && !(controls && url)
   return (
     <span className={cn("relative block overflow-hidden bg-muted", className)}>
@@ -145,7 +143,7 @@ export function PointMedia({
           <PlayIcon className="size-3.5 fill-current" />
         </span>
       )}
-      {badge && (isVideo || point.kind === "photo") && !(controls && url && isVideo) && (
+      {badge && (isVideo || media?.kind === "image") && !(controls && url && isVideo) && (
         <span className="absolute bottom-1.5 left-1.5 rounded-full bg-black/65 px-1.5 py-px text-[10.5px] font-medium text-white">
           {isVideo ? `Video${duration ? ` · ${duration}` : ""}` : "Photo"}
         </span>

@@ -13,6 +13,7 @@ import { useThemeColors } from "@/components/map/use-theme-colors"
 import { PointMedia } from "@/components/points/point-media"
 import { Button } from "@/components/ui/button"
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty"
+import { hasVideo } from "@/lib/points/media"
 import type { StoryDetail } from "@/lib/domain/schema"
 import { boundsOf, lineFeature } from "@/lib/geo"
 import {
@@ -240,7 +241,7 @@ function Player({
                   title={it.point.title}
                   className={cn(
                     "mk",
-                    it.point.kind === "video" && "video",
+                    hasVideo(it.point.media) && "video",
                     it.approx && "approx",
                     !on && "hid",
                     isActive && "active live",

@@ -51,7 +51,6 @@ export function toPoint(r: PointRow): Point {
     id: r.id,
     title: r.title,
     description: r.description,
-    kind: r.kind,
     location: [r.location[0], r.location[1]],
     locationPrecision: r.locationPrecision,
     locationRadiusM: r.locationRadiusM,

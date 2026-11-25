@@ -20,9 +20,8 @@ import { deletePoint } from "@/lib/actions"
 import type { Point, PointUsage } from "@/lib/domain/schema"
 import { formatCaptured } from "@/lib/time"
 import { matchesQuery } from "@/lib/points/match"
+import { mediaSummary } from "@/lib/points/media"
 import { PointMedia } from "./point-media"
-
-const KIND_LABEL = { photo: "Photo", video: "Video", audio: "Audio", note: "Note" } as const
 
 export function PointsTable({ points, usage }: { points: Point[]; usage: Record<string, PointUsage[]> }) {
   const [query, setQuery] = useState("")
@@ -36,7 +35,7 @@ export function PointsTable({ points, usage }: { points: Point[]; usage: Record<
             <MapPinIcon />
           </EmptyMedia>
           <EmptyTitle>No points yet</EmptyTitle>
-          <EmptyDescription>Points are single uploads (a photo, video or note) at a place and time.</EmptyDescription>
+          <EmptyDescription>Points are uploads (photos, videos, audio or a note) at a place and time.</EmptyDescription>
         </EmptyHeader>
         <EmptyContent>
           <Button asChild>
@@ -87,7 +86,7 @@ export function PointsTable({ points, usage }: { points: Point[]; usage: Record<
                       {p.title}
                     </Link>
                     <div className="truncate text-xs text-muted-foreground">
-                      {KIND_LABEL[p.kind]} · {p.placeName || "Unnamed place"}
+                      {mediaSummary(p.media)} · {p.placeName || "Unnamed place"}
                       {p.locationPrecision === "approximate" && " · approx. location"}
                       {p.locationPrecision === "obscured" && " · location hidden"}
                     </div>

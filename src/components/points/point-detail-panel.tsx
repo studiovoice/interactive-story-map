@@ -7,11 +7,10 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { MapPoint, Point, PointDetail } from "@/lib/domain/schema"
 import { isFuzzy, locationPrecisionLabel } from "@/lib/location"
+import { mediaSummary } from "@/lib/points/media"
 import { formatCaptured } from "@/lib/time"
 import { cn } from "@/lib/utils"
 import { AttachmentList, PointMedia } from "./point-media"
-
-const KIND_LABEL = { photo: "Photo", video: "Video", audio: "Audio", note: "Note" } as const
 
 export function PointDetailPanel({
   summary,
@@ -55,7 +54,7 @@ export function PointDetailPanel({
       )}
     >
       <div className="flex shrink-0 items-center gap-1 border-b py-1.5 pr-1.5 pl-3">
-        <Badge variant="secondary">{KIND_LABEL[summary.kind]}</Badge>
+        <Badge variant="secondary">{mediaSummary(summary.mediaKinds)}</Badge>
         <span className="flex-1" />
         <Button asChild variant="ghost" size="icon-sm" aria-label="Edit point">
           <Link href={`/points/${summary.id}/edit`}>

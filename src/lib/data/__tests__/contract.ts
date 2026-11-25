@@ -51,7 +51,6 @@ export function describeStoreContract(name: string, setup: () => Promise<StoreHa
         expect(p).toMatchObject({
           title: "A point",
           description: "",
-          kind: "photo",
           location: [-73.99, 40.7],
           locationPrecision: "exact",
           locationRadiusM: null,
@@ -72,7 +71,6 @@ export function describeStoreContract(name: string, setup: () => Promise<StoreHa
           pointInput({
             title: "Full",
             description: "Desc",
-            kind: "video",
             location: [2.352222, 48.856613],
             placeName: "Paris",
             capturedAt: "2026-03-14T10:05",
@@ -170,7 +168,16 @@ export function describeStoreContract(name: string, setup: () => Promise<StoreHa
       it("returns slim rows with inStory", async () => {
         const { points } = await storyWithPoints(1)
         const loose = await store.points.create(
-          pointInput({ title: "Loose", locationPrecision: "approximate", locationRadiusM: 250 }),
+          pointInput({
+            title: "Loose",
+            locationPrecision: "approximate",
+            locationRadiusM: 250,
+            media: [
+              { id: "med_cccccccccccc", kind: "video", source: "external", url: "https://x.test/v.mp4" },
+              { id: "med_dddddddddddd", kind: "image", source: "external", url: "https://x.test/a.jpg" },
+              { id: "med_eeeeeeeeeeee", kind: "video", source: "external", url: "https://x.test/w.mp4" },
+            ],
+          }),
         )
         const rows = await store.points.mapList()
         expect(rows).toHaveLength(2)
@@ -178,13 +185,18 @@ export function describeStoreContract(name: string, setup: () => Promise<StoreHa
         expect(byId[points[0].id]).toEqual({
           id: points[0].id,
           title: points[0].title,
-          kind: "photo",
+          mediaKinds: [],
           location: points[0].location,
           locationPrecision: "exact",
           locationRadiusM: null,
           inStory: true,
         })
-        expect(byId[loose.id]).toMatchObject({ inStory: false, locationPrecision: "approximate", locationRadiusM: 250 })
+        expect(byId[loose.id]).toMatchObject({
+          inStory: false,
+          locationPrecision: "approximate",
+          locationRadiusM: 250,
+          mediaKinds: ["video", "image", "video"],
+        })
       })
 
       it("reports where each point is used", async () => {

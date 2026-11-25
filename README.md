@@ -8,12 +8,12 @@ This is in relation to the VOICE platform being worked on at https://github.com/
 
 ## Concepts
 
-| Thing          | What it is                                                                                                                                                                              |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Point**      | One upload at a place and time: photo, video, audio or note, plus description, tags, contributor and media links. Points stand on their own and can be reused by any number of stories. |
-| **Collection** | A big umbrella project, such as a campaign or movement ("Spring Mobilization 2026"). Holds stories.                                                                                     |
-| **Story**      | One event inside a collection ("March over the Brooklyn Bridge"). Draft or published.                                                                                                   |
-| **Chapter**    | An ordered section of a story. Groups points and sets how they connect: **Path** (a drawn route revealed as it plays, e.g. a march) or **Timeline** (chronological, no line).           |
+| Thing          | What it is                                                                                                                                                                                                                                                       |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Point**      | One upload at a place and time: any number of photos, videos, audio clips and documents (or none, for a note), plus description, tags and contributor. Its type is derived from its files. Points stand on their own and can be reused by any number of stories. |
+| **Collection** | A big umbrella project, such as a campaign or movement ("Spring Mobilization 2026"). Holds stories.                                                                                                                                                              |
+| **Story**      | One event inside a collection ("March over the Brooklyn Bridge"). Draft or published.                                                                                                                                                                            |
+| **Chapter**    | An ordered section of a story. Groups points and sets how they connect: **Path** (a drawn route revealed as it plays, e.g. a march) or **Timeline** (chronological, no line).                                                                                    |
 
 A point's location can be **exact**, **approximate** (somewhere within a radius) or **hidden for privacy**. For
 hidden points the server stores a center moved to a random spot inside the circle, and the exact spot is never
@@ -162,7 +162,7 @@ Maps that show many points (explore, the point form's location picker, the story
 with hover labels and click handling. On the explore map nearby points merge into numbered clusters when zoomed out
 (click one to zoom in), and approximate areas only show from street level.
 
-The explore map gets a small `MapPoint` per point (`getMapPoints()` → `store.points.mapList()`: id, title, kind,
+The explore map gets a small `MapPoint` per point (`getMapPoints()` → `store.points.mapList()`: id, title, mediaKinds,
 location, precision, in-a-story). Everything else is loaded when a point is opened (`GET /api/points/:id`), and the
 search box asks the server (`GET /api/points/search?q=&lat=&lng=`), which returns every matching id (to filter the map)
 and the closest few in full. This holds up to tens of thousands of points: with 10,000 the page is about 200 KB
