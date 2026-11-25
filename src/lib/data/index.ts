@@ -7,12 +7,13 @@ import { getDb } from "./drizzle/client"
 
 /**
  * Pick the persistence driver with DATA_DRIVER:
- *   - "json" (default): one file on disk, no setup (`src/lib/data/json/`).
- *   - "drizzle": Postgres (`src/lib/data/drizzle/`). Needs DATABASE_URL and `pnpm db:migrate`.
+ *   - "drizzle" (default): Postgres (`src/lib/data/drizzle/`). Locally: `pnpm services:up`, then
+ *     `pnpm db:migrate && pnpm db:seed`. In production DATABASE_URL must be set.
+ *   - "json": one file on disk, no Docker needed (`src/lib/data/json/`). Handy for a quick look.
  * Both implement `DataStore` and pass the same contract tests (`src/lib/data/__tests__/`).
  */
 function createStore(): DataStore {
-  const driver = process.env.DATA_DRIVER ?? "json"
+  const driver = process.env.DATA_DRIVER || "drizzle"
   switch (driver) {
     case "json":
       return createJsonStore()
