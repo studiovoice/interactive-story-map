@@ -136,10 +136,11 @@ get a generated placeholder scene, like the prototype.
   see `.env.example`).
 
 Upload flow: the point form calls the `createMediaUpload` server action, which checks the file's type and size and
-returns a presigned PUT to `tmp/<mediaId>/<file>`. The browser uploads straight to the bucket (no bytes go through
+returns a presigned PUT to `tmp/<mediaId>/<kind>.<ext>` (e.g. `image.jpg`; the uploader's file name stays out of
+URLs). The browser uploads straight to the bucket (no bytes go through
 Next.js) and adds `{ source: "storage", storageKey: "tmp/…" }` to the form. When the point is saved, the server checks
 each new file in the bucket (a `tmp/` key, exists, allowed type, under `MEDIA_MAX_BYTES`), deletes bad ones, and moves
-good ones to `points/<mediaId>/<file>` (copy, save the point, then delete the `tmp/` copy). Files removed from a point,
+good ones to `points/<mediaId>/<kind>.<ext>` (copy, save the point, then delete the `tmp/` copy). Files removed from a point,
 or of a deleted point, are deleted from the bucket.
 
 Uploads that are never saved (form abandoned, file removed, save failed) stay in `tmp/`, where a bucket lifecycle rule

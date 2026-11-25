@@ -66,7 +66,8 @@ const DEFAULT_MEDIA_KIND: Record<PointKind, MediaKind> = {
   note: "document",
 }
 
-type MediaRow = MediaAsset & { durationText?: string }
+/** `localName`: the picked file's name, shown in the form so rows can be told apart. Never saved. */
+type MediaRow = MediaAsset & { durationText?: string; localName?: string }
 
 /** Length of a video/audio file in whole seconds, read from its metadata in the browser. */
 function readDuration(file: File, kind: "video" | "audio"): Promise<number | undefined> {
@@ -139,7 +140,10 @@ export function PointForm({
         if (!put.ok) throw new Error(`Upload failed with ${put.status}`)
         const durationSec =
           asset.kind === "video" || asset.kind === "audio" ? await readDuration(file, asset.kind) : undefined
-        setMedia((rows) => [...rows, { ...asset, durationSec, durationText: durationSec?.toString() }])
+        setMedia((rows) => [
+          ...rows,
+          { ...asset, localName: file.name, durationSec, durationText: durationSec?.toString() },
+        ])
       } catch (err) {
         console.error(err)
         toast.error(`Couldn't upload “${file.name}”. Please try again.`)
@@ -202,7 +206,8 @@ export function PointForm({
       contributor,
       media: media
         .filter((m) => (m.source === "storage" ? m.storageKey : m.url?.trim() || m.fileName?.trim()))
-        .map(({ durationText, ...m }) => ({
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars -- localName is form-only, never sent
+        .map(({ durationText, localName, ...m }) => ({
           ...m,
           url: m.url?.trim() || undefined,
           fileName: m.fileName?.trim() || undefined,
@@ -346,7 +351,7 @@ export function PointForm({
                 {m.source === "storage" ? (
                   <div className="flex min-w-0 items-center gap-2 rounded-md border bg-muted/40 px-3 text-sm text-muted-foreground">
                     <CloudIcon className="size-4 shrink-0" />
-                    <span className="truncate">Uploaded file</span>
+                    <span className="truncate">{m.localName ? `Uploaded: ${m.localName}` : "Uploaded file"}</span>
                   </div>
                 ) : (
                   <Input
@@ -366,13 +371,16 @@ export function PointForm({
                 >
                   <Trash2Icon />
                 </Button>
-                <Input
-                  className="col-span-2 col-start-2"
-                  value={m.fileName ?? ""}
-                  onChange={(e) => updateMedia(i, { fileName: e.target.value })}
-                  placeholder="File name (optional)"
-                  aria-label="File name"
-                />
+                {/* Only documents show a label (as their link text); it's public, so it starts empty. */}
+                {m.kind === "document" && (
+                  <Input
+                    className="col-span-2 col-start-2"
+                    value={m.fileName ?? ""}
+                    onChange={(e) => updateMedia(i, { fileName: e.target.value })}
+                    placeholder="Label (optional)"
+                    aria-label="Label"
+                  />
+                )}
                 {(m.kind === "video" || m.kind === "audio") && (
                   <Input
                     className="col-span-2 col-start-2"

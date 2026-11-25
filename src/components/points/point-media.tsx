@@ -154,14 +154,21 @@ export function PointMedia({
   )
 }
 
+/** Link text for a document without a label: its type, numbered when there are several. */
+function documentFallbackLabel(doc: MediaAsset, index: number, count: number): string {
+  const type =
+    doc.mimeType === "application/pdf" ? "PDF document" : doc.mimeType === "text/plain" ? "Text document" : "Document"
+  return count > 1 ? `${type} ${index + 1}` : type
+}
+
 export function AttachmentList({ point }: { point: Point }) {
   const docs = point.media.filter((m) => m.kind === "document")
   if (!docs.length) return null
   return (
     <div className="flex flex-col gap-1.5">
-      {docs.map((d) => {
+      {docs.map((d, i) => {
         const url = mediaUrl(d)
-        const label = d.fileName || url || "Attachment"
+        const label = d.fileName || (d.source === "external" && url) || documentFallbackLabel(d, i, docs.length)
         return (
           <a
             key={d.id}
