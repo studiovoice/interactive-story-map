@@ -62,8 +62,8 @@ services:
       timeout: 5s
       retries: 30
 
-  # One-shot: create the bucket and set its CORS rules, then exit. Uses the AWS CLI so the same
-  # commands work against S3 and R2 (see scripts/storage/cors.json).
+  # One-shot: create the bucket and set its CORS and lifecycle rules, then exit. Uses the AWS CLI so
+  # the same commands work against S3 and R2 (see scripts/storage/cors.json and lifecycle.json).
   storage-init:
     image: amazon/aws-cli:2.39.1
     depends_on:
@@ -77,12 +77,14 @@ services:
       BUCKET: story-map-media
     volumes:
       - ./scripts/storage/cors.json:/cors.json:ro
+      - ./scripts/storage/lifecycle.json:/lifecycle.json:ro
     entrypoint: ["sh", "-c"]
     command:
       - |
         set -e
         aws s3api head-bucket --bucket "$$BUCKET" 2>/dev/null || aws s3api create-bucket --bucket "$$BUCKET"
         aws s3api put-bucket-cors --bucket "$$BUCKET" --cors-configuration file:///cors.json
+        aws s3api put-bucket-lifecycle-configuration --bucket "$$BUCKET" --lifecycle-configuration file:///lifecycle.json
         echo "Bucket $$BUCKET ready"
 
 volumes:

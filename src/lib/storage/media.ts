@@ -4,7 +4,7 @@ import { z } from "zod"
 import { newId } from "@/lib/ids"
 import type { MediaAsset, MediaKind } from "@/lib/domain/schema"
 import type { PresignedUpload, StorageProvider } from "./index"
-import { mediaIdFromKey, mediaKindForMime, storageKeyFor } from "./rules"
+import { mediaIdFromKey, mediaKindForMime, parseStorageKey, storageKeyFor, uploadKeyFor } from "./rules"
 
 /** A problem the user can fix (shown as the error message of the action). */
 export class MediaError extends Error {
@@ -24,12 +24,12 @@ export const mediaUploadRequestSchema = z.object({
 export type MediaUploadRequest = z.input<typeof mediaUploadRequestSchema>
 
 export type MediaUpload = {
-  /** The new asset, ready to add to the point once the upload has finished. */
+  /** The new asset (with its `tmp/` key), ready to add to the point once the upload has finished. */
   asset: MediaAsset & { source: "storage"; storageKey: string }
   upload: PresignedUpload
 }
 
-/** Check a file the browser wants to upload and presign a PUT for it. */
+/** Check a file the browser wants to upload and presign a PUT for it, to a `tmp/` key. */
 export async function createMediaUpload(
   storage: StorageProvider,
   maxBytes: number,
@@ -42,7 +42,7 @@ export async function createMediaUpload(
   if (size > maxBytes) throw new MediaError(`That file is too big (the limit is ${formatMb(maxBytes)}).`)
 
   const id = newId("med")
-  const storageKey = storageKeyFor(id, fileName)
+  const storageKey = uploadKeyFor(id, fileName)
   const upload = await storage.createUpload({ storageKey, mimeType, size })
   return { asset: { id, kind, source: "storage", storageKey, fileName, mimeType }, upload }
 }
@@ -51,11 +51,14 @@ const sameStored = (a: MediaAsset, b: MediaAsset) =>
   a.id === b.id && a.source === "storage" && b.source === "storage" && a.storageKey === b.storageKey
 
 /**
- * Before saving a point: check every stored file that wasn't on the point before. It must be one
- * of our keys, belong to its asset's id, exist, and have an allowed type and size. The type and
- * kind are taken from the bucket, not from the browser. Bad files are deleted.
+ * Before saving a point: check every stored file that wasn't on the point before. It must be a fresh
+ * upload (a `tmp/` key belonging to its asset's id), exist, and have an allowed type and size. The
+ * type and kind are taken from the bucket, not from the browser. Bad files are deleted.
  *
- * Returns the media list to save.
+ * Requiring `tmp/` means a point can't claim a file that's already on another point (a `points/`
+ * key), so deleting one point can never delete another point's file.
+ *
+ * Returns the media list, still with `tmp/` keys; `saveWithStoredMedia` moves them.
  */
 export async function verifyStoredMedia(
   storage: StorageProvider,
@@ -72,10 +75,14 @@ export async function verifyStoredMedia(
       if (previous.some((p) => sameStored(p, asset))) return asset
 
       const key = asset.storageKey ?? ""
-      if (mediaIdFromKey(key) !== asset.id)
+      const parsed = parseStorageKey(key)
+      if (parsed?.prefix !== "tmp" || parsed.mediaId !== asset.id)
         throw new MediaError("An uploaded file isn't valid. Remove it and upload it again.")
       const head = await storage.head(key)
-      if (!head) throw new MediaError(`“${asset.fileName ?? key}” hasn't finished uploading. Try again in a moment.`)
+      if (!head)
+        throw new MediaError(
+          `“${asset.fileName ?? key}” isn't in storage. It may still be uploading, or it expired: remove it and upload it again.`,
+        )
 
       const contentType = head.contentType?.split(";")[0].trim().toLowerCase() ?? ""
       const kind = mediaKindForMime(contentType)
@@ -91,6 +98,60 @@ export async function verifyStoredMedia(
       return { ...asset, kind: kind as MediaKind, mimeType: contentType }
     }),
   )
+}
+
+/**
+ * Save a point with its media: verify new uploads, move them from `tmp/` to `points/`, then call
+ * `save` with the media list pointing at `points/`.
+ *
+ * Order: copy → save → delete the `tmp/` originals. The saved point never names a file that isn't
+ * there yet. If the save fails, the copies are removed again and the `tmp/` originals are still
+ * there, so the user can retry. Anything left in `tmp/` is removed by the bucket's lifecycle rule.
+ */
+export async function saveWithStoredMedia<T>(
+  storage: StorageProvider,
+  maxBytes: number,
+  next: MediaAsset[],
+  previous: MediaAsset[],
+  save: (media: MediaAsset[]) => Promise<T>,
+): Promise<T> {
+  const verified = await verifyStoredMedia(storage, maxBytes, next, previous)
+  if (!storage.canUpload) return save(verified)
+
+  const moves: { from: string; to: string }[] = []
+  const media = verified.map((asset) => {
+    const parsed = asset.source === "storage" && asset.storageKey ? parseStorageKey(asset.storageKey) : null
+    if (parsed?.prefix !== "tmp") return asset
+    const to = storageKeyFor(parsed.mediaId, parsed.fileName)
+    moves.push({ from: asset.storageKey!, to })
+    return { ...asset, storageKey: to }
+  })
+
+  const copies = await Promise.allSettled(moves.map((m) => storage.copy(m.from, m.to)))
+  const failed = copies.find((r) => r.status === "rejected")
+  if (failed) {
+    await deleteStoredMedia(
+      storage,
+      moves.filter((_, i) => copies[i].status === "fulfilled").map((m) => m.to),
+    )
+    throw failed.reason
+  }
+
+  let result: T
+  try {
+    result = await save(media)
+  } catch (err) {
+    await deleteStoredMedia(
+      storage,
+      moves.map((m) => m.to),
+    )
+    throw err
+  }
+  await deleteStoredMedia(
+    storage,
+    moves.map((m) => m.from),
+  )
+  return result
 }
 
 /** Keys that were on the point before but aren't any more. */

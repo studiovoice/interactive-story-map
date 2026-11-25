@@ -1,0 +1,11 @@
+{
+  "Rules": [
+    {
+      "ID": "expire-unsaved-uploads",
+      "Status": "Enabled",
+      "Filter": { "Prefix": "tmp/" },
+      "Expiration": { "Days": 1 },
+      "AbortIncompleteMultipartUpload": { "DaysAfterInitiation": 1 }
+    }
+  ]
+}

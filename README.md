@@ -136,17 +136,23 @@ get a generated placeholder scene, like the prototype.
   see `.env.example`).
 
 Upload flow: the point form calls the `createMediaUpload` server action, which checks the file's type and size and
-returns a presigned PUT. The browser uploads straight to the bucket (no bytes go through Next.js), then adds
-`{ source: "storage", storageKey: "points/<mediaId>/<file>" }` to the point. When the point is saved, the server checks
-each new file in the bucket (exists, allowed type, under `MEDIA_MAX_BYTES`) and deletes bad ones. Files removed from a
-point, or of a deleted point, are deleted from the bucket.
+returns a presigned PUT to `tmp/<mediaId>/<file>`. The browser uploads straight to the bucket (no bytes go through
+Next.js) and adds `{ source: "storage", storageKey: "tmp/…" }` to the form. When the point is saved, the server checks
+each new file in the bucket (a `tmp/` key, exists, allowed type, under `MEDIA_MAX_BYTES`), deletes bad ones, and moves
+good ones to `points/<mediaId>/<file>` (copy, save the point, then delete the `tmp/` copy). Files removed from a point,
+or of a deleted point, are deleted from the bucket.
+
+Uploads that are never saved (form abandoned, file removed, save failed) stay in `tmp/`, where a bucket lifecycle rule
+deletes them after a day ([`scripts/storage/lifecycle.json`](scripts/storage/lifecycle.json)). Because new files must
+come from `tmp/`, a point can't claim a file that's already on another point.
 
 The bucket stays private. Stored media are shown through `/api/media/<storageKey>`, which redirects to a short-lived
 presigned URL; that's also where access checks go once there's auth. Code: [`src/lib/storage`](src/lib/storage)
 (`client.ts` is the browser half, `index.ts` / `s3-storage.ts` / `media.ts` the server half).
 
-A production bucket needs CORS for the app's origin (`PUT`, `GET`, `HEAD`, header `Content-Type`); see
-[`scripts/storage/cors.json`](scripts/storage/cors.json).
+A production bucket needs CORS for the app's origin (`PUT`, `GET`, `HEAD`, header `Content-Type`; see
+[`scripts/storage/cors.json`](scripts/storage/cors.json)) and the lifecycle rule
+([`scripts/storage/lifecycle.json`](scripts/storage/lifecycle.json)). Locally, `pnpm services:up` sets both.
 
 ## Loading points on maps
 

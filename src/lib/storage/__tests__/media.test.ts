@@ -6,14 +6,22 @@ import {
   deleteStoredMedia,
   MediaError,
   removedStorageKeys,
+  saveWithStoredMedia,
   verifyStoredMedia,
 } from "@/lib/storage/media"
-import { mediaIdFromKey, mediaKindForMime, sanitizeFileName, storageKeyFor } from "@/lib/storage/rules"
+import {
+  mediaIdFromKey,
+  mediaKindForMime,
+  parseStorageKey,
+  sanitizeFileName,
+  storageKeyFor,
+  uploadKeyFor,
+} from "@/lib/storage/rules"
 
 const MB = 1024 * 1024
 
 /** An in-memory bucket. */
-function fakeStorage(objects: Record<string, { size: number; contentType: string | null }> = {}) {
+function fakeBucket(objects: Record<string, { size: number; contentType: string | null }> = {}) {
   const storage = {
     name: "fake",
     canUpload: true,
@@ -25,13 +33,20 @@ function fakeStorage(objects: Record<string, { size: number; contentType: string
     })),
     getReadUrl: vi.fn(async (k: string) => `https://bucket.test/${k}`),
     head: vi.fn(async (k: string) => objects[k] ?? null),
+    copy: vi.fn(async (from: string, to: string) => {
+      if (!objects[from]) throw new Error(`no such key ${from}`)
+      objects[to] = { ...objects[from] }
+    }),
     delete: vi.fn(async (k: string) => {
       delete objects[k]
     }),
   } satisfies StorageProvider
-  return storage
+  return { storage, objects }
 }
 
+const fakeStorage = (objects: Parameters<typeof fakeBucket>[0] = {}) => fakeBucket(objects).storage
+
+/** A file already on a saved point. */
 const stored = (id: string, file = "a.jpg", extra: Partial<MediaAsset> = {}): MediaAsset => ({
   id,
   kind: "image",
@@ -40,6 +55,10 @@ const stored = (id: string, file = "a.jpg", extra: Partial<MediaAsset> = {}): Me
   fileName: file,
   ...extra,
 })
+
+/** A fresh upload, not saved on a point yet. */
+const uploaded = (id: string, file = "a.jpg", extra: Partial<MediaAsset> = {}): MediaAsset =>
+  stored(id, file, { storageKey: `tmp/${id}/${file}`, ...extra })
 
 describe("rules", () => {
   it("sanitizes file names for keys", () => {
@@ -58,6 +77,13 @@ describe("rules", () => {
     expect(mediaIdFromKey("points/med_abcdefghijkl/../x")).toBeNull()
     expect(mediaIdFromKey("other/med_abcdefghijkl/x.jpg")).toBeNull()
     expect(() => storageKeyFor("nope", "x")).toThrow()
+
+    const tmp = uploadKeyFor("med_abcdefghijkl", "My photo.jpeg")
+    expect(tmp).toBe("tmp/med_abcdefghijkl/My-photo.jpeg")
+    expect(parseStorageKey(tmp)).toEqual({ prefix: "tmp", mediaId: "med_abcdefghijkl", fileName: "My-photo.jpeg" })
+    expect(parseStorageKey(key)?.prefix).toBe("points")
+    expect(parseStorageKey("tmp/med_abcdefghijkl/../x")).toBeNull()
+    expect(() => uploadKeyFor("nope", "x")).toThrow()
   })
 
   it("maps MIME types to media kinds", () => {
@@ -68,7 +94,7 @@ describe("rules", () => {
 })
 
 describe("createMediaUpload", () => {
-  it("presigns a PUT for an allowed file", async () => {
+  it("presigns a PUT for an allowed file, to a tmp/ key", async () => {
     const s = fakeStorage()
     const res = await createMediaUpload(s, 10 * MB, { fileName: "Bridge.jpg", mimeType: "image/jpeg", size: 1000 })
     expect(res.asset).toMatchObject({
@@ -78,7 +104,7 @@ describe("createMediaUpload", () => {
       mimeType: "image/jpeg",
     })
     expect(res.asset.id).toMatch(/^med_[a-z0-9]{12}$/)
-    expect(res.asset.storageKey).toBe(`points/${res.asset.id}/Bridge.jpg`)
+    expect(res.asset.storageKey).toBe(`tmp/${res.asset.id}/Bridge.jpg`)
     expect(s.createUpload).toHaveBeenCalledWith({
       storageKey: res.asset.storageKey,
       mimeType: "image/jpeg",
@@ -106,7 +132,7 @@ describe("verifyStoredMedia", () => {
   const external: MediaAsset = { id: "med_ext", kind: "image", source: "external", url: "https://x.test/a.jpg" }
 
   it("accepts uploaded files and takes type and kind from the bucket", async () => {
-    const asset = stored("med_aaaaaaaaaaaa", "a.mp4", { kind: "image", mimeType: "image/jpeg" })
+    const asset = uploaded("med_aaaaaaaaaaaa", "a.mp4", { kind: "image", mimeType: "image/jpeg" })
     const s = fakeStorage({ [asset.storageKey!]: { size: 100, contentType: "video/mp4" } })
     const media = await verifyStoredMedia(s, MB, [external, asset])
     expect(media).toEqual([external, { ...asset, kind: "video", mimeType: "video/mp4" }])
@@ -120,21 +146,29 @@ describe("verifyStoredMedia", () => {
   })
 
   it("rejects missing files and keys that don't match the asset", async () => {
-    const s = fakeStorage({ "points/med_bbbbbbbbbbbb/a.jpg": { size: 1, contentType: "image/jpeg" } })
-    await expect(verifyStoredMedia(s, MB, [stored("med_aaaaaaaaaaaa")])).rejects.toThrow(/finished uploading/)
+    const s = fakeStorage({ "tmp/med_bbbbbbbbbbbb/a.jpg": { size: 1, contentType: "image/jpeg" } })
+    await expect(verifyStoredMedia(s, MB, [uploaded("med_aaaaaaaaaaaa")])).rejects.toThrow(/isn't in storage/)
     await expect(
-      verifyStoredMedia(s, MB, [{ ...stored("med_aaaaaaaaaaaa"), storageKey: "points/med_bbbbbbbbbbbb/a.jpg" }]),
+      verifyStoredMedia(s, MB, [{ ...uploaded("med_aaaaaaaaaaaa"), storageKey: "tmp/med_bbbbbbbbbbbb/a.jpg" }]),
     ).rejects.toThrow(/isn't valid/)
     // Same id but a swapped key counts as new, and is checked.
     const prev = stored("med_aaaaaaaaaaaa")
     await expect(
-      verifyStoredMedia(s, MB, [{ ...prev, storageKey: "points/med_aaaaaaaaaaaa/b.jpg" }], [prev]),
+      verifyStoredMedia(s, MB, [{ ...prev, storageKey: "tmp/med_aaaaaaaaaaaa/b.jpg" }], [prev]),
     ).rejects.toThrow()
   })
 
+  it("won't let a point claim a file that's on another point", async () => {
+    // The file exists and is valid, but it's a saved file (points/), not a fresh upload.
+    const other = stored("med_aaaaaaaaaaaa")
+    const s = fakeStorage({ [other.storageKey!]: { size: 1, contentType: "image/jpeg" } })
+    await expect(verifyStoredMedia(s, MB, [other])).rejects.toThrow(/isn't valid/)
+    expect(s.head).not.toHaveBeenCalled()
+  })
+
   it("deletes and rejects files that are too big or of the wrong type", async () => {
-    const big = stored("med_aaaaaaaaaaaa")
-    const bad = stored("med_bbbbbbbbbbbb", "a.html")
+    const big = uploaded("med_aaaaaaaaaaaa")
+    const bad = uploaded("med_bbbbbbbbbbbb", "a.html")
     const s = fakeStorage({
       [big.storageKey!]: { size: 2 * MB, contentType: "image/jpeg" },
       [bad.storageKey!]: { size: 1, contentType: "text/html" },
@@ -149,6 +183,53 @@ describe("verifyStoredMedia", () => {
     const s = { ...fakeStorage(), canUpload: false }
     const asset = stored("med_aaaaaaaaaaaa")
     expect(await verifyStoredMedia(s, MB, [asset])).toEqual([asset])
+  })
+})
+
+describe("saveWithStoredMedia", () => {
+  const file = { size: 1, contentType: "image/jpeg" }
+
+  it("moves new uploads from tmp/ to points/ and saves the points/ keys", async () => {
+    const kept = stored("med_aaaaaaaaaaaa")
+    const fresh = uploaded("med_bbbbbbbbbbbb", "b.jpg")
+    const { storage, objects } = fakeBucket({ [kept.storageKey!]: file, [fresh.storageKey!]: file })
+    const save = vi.fn(async (media: MediaAsset[]) => media)
+
+    const saved = await saveWithStoredMedia(storage, MB, [kept, fresh], [kept], save)
+
+    expect(saved.map((m) => m.storageKey)).toEqual([kept.storageKey, "points/med_bbbbbbbbbbbb/b.jpg"])
+    expect(Object.keys(objects).sort()).toEqual([kept.storageKey, "points/med_bbbbbbbbbbbb/b.jpg"])
+    expect(storage.copy).toHaveBeenCalledOnce()
+  })
+
+  it("removes the copies and keeps the uploads when the save fails", async () => {
+    const fresh = uploaded("med_bbbbbbbbbbbb")
+    const { storage, objects } = fakeBucket({ [fresh.storageKey!]: file })
+    const fail = new Error("db down")
+    await expect(saveWithStoredMedia(storage, MB, [fresh], [], () => Promise.reject(fail))).rejects.toBe(fail)
+    // The upload is still in tmp/, so saving again works.
+    expect(Object.keys(objects)).toEqual([fresh.storageKey])
+  })
+
+  it("doesn't save when a copy fails, and removes the copies that worked", async () => {
+    const a = uploaded("med_aaaaaaaaaaaa")
+    const b = uploaded("med_bbbbbbbbbbbb")
+    const { storage, objects } = fakeBucket({ [a.storageKey!]: file, [b.storageKey!]: file })
+    storage.copy.mockImplementationOnce(async () => {
+      throw new Error("copy failed")
+    })
+    const save = vi.fn()
+    await expect(saveWithStoredMedia(storage, MB, [a, b], [], save)).rejects.toThrow(/copy failed/)
+    expect(save).not.toHaveBeenCalled()
+    expect(Object.keys(objects).sort()).toEqual([a.storageKey, b.storageKey])
+  })
+
+  it("just saves without a bucket", async () => {
+    const storage = { ...fakeStorage(), canUpload: false }
+    const asset = stored("med_aaaaaaaaaaaa")
+    const save = vi.fn(async (media: MediaAsset[]) => media)
+    expect(await saveWithStoredMedia(storage, MB, [asset], [], save)).toEqual([asset])
+    expect(storage.copy).not.toHaveBeenCalled()
   })
 })
 
