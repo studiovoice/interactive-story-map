@@ -25,29 +25,27 @@ their points.
 
 ## Getting started
 
+The app runs with `pnpm dev`; `docker-compose.yml` runs Postgres (with PostGIS) and
+[RustFS](https://github.com/rustfs/rustfs), an S3-compatible object store for uploads.
+
 ```bash
 pnpm install
-pnpm dev            # http://localhost:3000
-```
-
-On first run `data/db.json` is created from `data/seed.json` (the prototype's fictional Brooklyn Bridge story plus 26
-unrelated nearby points). `pnpm data:reset` puts it back to the seed. `db.json` is git-ignored.
-
-### With Postgres and file uploads (Docker)
-
-`docker-compose.yml` runs Postgres (with PostGIS) and [RustFS](https://github.com/rustfs/rustfs), an S3-compatible
-object store. The app itself still runs with `pnpm dev`.
-
-```bash
-cp .env.example .env.local   # then set DATA_DRIVER=drizzle and NEXT_PUBLIC_STORAGE_DRIVER=s3
+cp .env.example .env.local   # Postgres + uploads, matching docker-compose.yml
 pnpm services:up             # start Postgres + RustFS, create the bucket
 pnpm db:migrate              # create the tables
-pnpm db:seed                 # load data/seed.json (or: pnpm db:seed data/db.json to import your local data)
-pnpm dev
+pnpm db:seed                 # load data/seed.json (or: pnpm db:seed data/db.json to import json-driver data)
+pnpm dev                     # http://localhost:3000
 ```
 
-The RustFS console is at http://localhost:9001 (log in with `rustfs-dev` / `rustfs-dev-secret`). `pnpm services:down`
-stops the services and keeps the data; `pnpm services:reset` wipes it. `pnpm db:reset` re-seeds the database.
+The seed is the prototype's fictional Brooklyn Bridge story plus 26 unrelated nearby points. The RustFS console is at
+http://localhost:9001 (log in with `rustfs-dev` / `rustfs-dev-secret`). `pnpm services:down` stops the services and
+keeps the data; `pnpm services:reset` wipes it. `pnpm db:reset` re-seeds the database.
+
+### Without Docker
+
+Set `DATA_DRIVER=json` and `NEXT_PUBLIC_STORAGE_DRIVER=none` in `.env.local` (or skip `.env.local` and run
+`DATA_DRIVER=json pnpm dev`). Data then lives in `data/db.json` (git-ignored), created from `data/seed.json` on first
+run; `pnpm data:reset` puts it back to the seed. Media can only be linked by URL.
 
 Other scripts: `pnpm build`, `pnpm lint`, `pnpm typecheck`, `pnpm format`, `pnpm test` (see "Tests"),
 `pnpm db:generate` (new migration after changing the schema), `pnpm db:studio`.
@@ -97,12 +95,14 @@ prototype/                  original HTML prototypes
 Pages and server actions only use `store` from `src/lib/data`, which implements the `DataStore` interface in
 [`src/lib/data/repository.ts`](src/lib/data/repository.ts). `DATA_DRIVER` picks the driver:
 
-- `json` (default): one file (`DATA_FILE`, default `data/db.json`) with one array per table (`points`, `collections`,
-  `stories`, `chapters`, `chapterPoints`). Writes are queued and written atomically. No setup.
-- `drizzle`: Postgres via [Drizzle](https://orm.drizzle.team) and `postgres.js` (`DATABASE_URL`). Tables are in
+- `drizzle` (default): Postgres via [Drizzle](https://orm.drizzle.team) and `postgres.js` (`DATABASE_URL`; outside
+  production it defaults to the compose database). Tables are in
   [`src/lib/data/drizzle/schema.ts`](src/lib/data/drizzle/schema.ts), migrations in `drizzle/`. Locations are PostGIS
   `geometry(Point, 4326)`; search uses a trigram-indexed `search_text` column; `saveChapters` and other multi-step
   writes run in one transaction.
+- `json`: one file (`DATA_FILE`, default `data/db.json`) with one array per table (`points`, `collections`,
+  `stories`, `chapters`, `chapterPoints`). Writes are queued and written atomically. No setup; for a quick look without
+  Docker.
 
 Both drivers pass the same contract tests, so they behave the same. To change the schema: edit `schema.ts`,
 `pnpm db:generate`, review the SQL in `drizzle/`, `pnpm db:migrate`. (drizzle-kit 0.31 drops the SRID from geometry
