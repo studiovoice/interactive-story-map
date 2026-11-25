@@ -32,7 +32,8 @@ type Hit =
 /**
  * Many points drawn by the GPU as one GeoJSON layer (instead of one DOM element each), so a map
  * can show thousands. With `cluster`, nearby points merge into numbered bubbles when zoomed out;
- * clicking one zooms in. Points in `litIds` (selected / highlighted) are drawn on top, unclustered, with a pulse.
+ * clicking one zooms in. Points in `litIds` (selected / highlighted) are left out of the clusters and
+ * drawn on top with a pulse.
  *
  * `look` decides how each point is drawn. Pass a stable function (the React Compiler memoizes
  * inline ones) since a new one rebuilds the layer's data.
@@ -78,12 +79,15 @@ export function PointsLayer<P extends PointLike>({
       }),
     [points, look],
   )
-  const data = useMemo(() => ({ type: "FeatureCollection" as const, features }), [features])
-
+  // Lit points are drawn only by the lit layer. Kept in the main data, they'd still be merged into
+  // a cluster when zoomed out: counted in the bubble and drawn again beside it.
   const litKey = litIds.filter(Boolean).join(",")
-  const litData = useMemo(() => {
+  const { data, litData } = useMemo(() => {
     const ids = new Set(litKey.split(","))
-    return { type: "FeatureCollection" as const, features: features.filter((f) => ids.has(f.properties.id)) }
+    return {
+      data: { type: "FeatureCollection" as const, features: features.filter((f) => !ids.has(f.properties.id)) },
+      litData: { type: "FeatureCollection" as const, features: features.filter((f) => ids.has(f.properties.id)) },
+    }
   }, [features, litKey])
 
   const [source] = useState<SourceOptions | undefined>(() =>
