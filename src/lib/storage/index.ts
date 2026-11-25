@@ -9,9 +9,9 @@ import { S3Storage } from "./s3-storage"
  * The browser side (`mediaUrl`, `uploadsEnabled`) is in `./client.ts`.
  *
  * Upload flow: the point form calls the `createMediaUpload` server action, which returns a
- * presigned PUT from `createUpload()`. The browser PUTs the file straight to the bucket and
- * saves a `MediaAsset { source: "storage", storageKey }` on the point. On save, the server
- * checks the object with `head()` before accepting it.
+ * presigned PUT from `createUpload()` for a `tmp/` key. The browser PUTs the file straight to the
+ * bucket and adds a `MediaAsset { source: "storage", storageKey }` to the form. On save, the server
+ * checks the object with `head()`, then `copy()`s it to `points/` and deletes the `tmp/` copy.
  */
 export interface StorageProvider {
   readonly name: string
@@ -23,6 +23,8 @@ export interface StorageProvider {
   getReadUrl(storageKey: string): Promise<string>
   /** Size and type of a stored object, or null when it doesn't exist. */
   head(storageKey: string): Promise<{ size: number; contentType: string | null } | null>
+  /** Copy an object inside the bucket, keeping its type. Overwrites `to`. */
+  copy(from: string, to: string): Promise<void>
   delete(storageKey: string): Promise<void>
 }
 
@@ -45,6 +47,9 @@ class NoStorage implements StorageProvider {
   }
   async head() {
     return null
+  }
+  async copy(): Promise<never> {
+    throw new Error("File uploads are not configured.")
   }
   async delete() {}
 }

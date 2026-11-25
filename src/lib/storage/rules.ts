@@ -46,17 +46,37 @@ export function sanitizeFileName(fileName: string): string {
 }
 
 const MEDIA_ID = /^med_[a-z0-9]{12}$/
-const KEY = /^points\/(med_[a-z0-9]{12})\/[a-zA-Z0-9._-]{1,100}$/
+const KEY = /^(tmp|points)\/(med_[a-z0-9]{12})\/([a-zA-Z0-9._-]{1,100})$/
 
 export const isMediaId = (id: string) => MEDIA_ID.test(id)
 
-/** Object key for one uploaded file: `points/<mediaId>/<file-name>`. */
-export function storageKeyFor(mediaId: string, fileName: string): string {
+/**
+ * Where files live in the bucket:
+ * - `tmp/<mediaId>/<file>`: just uploaded, not on a saved point yet. A bucket lifecycle rule deletes
+ *   these after a day (scripts/storage/lifecycle.json), so abandoned uploads clean themselves up.
+ * - `points/<mediaId>/<file>`: on a saved point. Files only get here by being moved out of `tmp/` when
+ *   a point is saved, so each one belongs to exactly one point.
+ */
+export type KeyPrefix = "tmp" | "points"
+
+function keyFor(prefix: KeyPrefix, mediaId: string, fileName: string): string {
   if (!isMediaId(mediaId)) throw new Error(`Invalid media id "${mediaId}"`)
-  return `points/${mediaId}/${sanitizeFileName(fileName)}`
+  return `${prefix}/${mediaId}/${sanitizeFileName(fileName)}`
+}
+
+/** Key a new upload goes to: `tmp/<mediaId>/<file-name>`. */
+export const uploadKeyFor = (mediaId: string, fileName: string) => keyFor("tmp", mediaId, fileName)
+
+/** Key of a file on a saved point: `points/<mediaId>/<file-name>`. */
+export const storageKeyFor = (mediaId: string, fileName: string) => keyFor("points", mediaId, fileName)
+
+/** Split one of our keys into its parts, or null when the key isn't one of ours. */
+export function parseStorageKey(key: string): { prefix: KeyPrefix; mediaId: string; fileName: string } | null {
+  const m = KEY.exec(key)
+  return m ? { prefix: m[1] as KeyPrefix, mediaId: m[2], fileName: m[3] } : null
 }
 
 /** The media id a key belongs to, or null when the key isn't one of ours. */
 export function mediaIdFromKey(key: string): string | null {
-  return KEY.exec(key)?.[1] ?? null
+  return parseStorageKey(key)?.mediaId ?? null
 }

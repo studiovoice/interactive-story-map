@@ -3,8 +3,9 @@ import { getStorage } from "@/lib/storage"
 import { mediaIdFromKey } from "@/lib/storage/rules"
 
 /**
- * GET /api/media/points/<mediaId>/<file> → 302 to a short-lived presigned URL in the bucket.
- * The bucket stays private; `mediaUrl()` points stored media here.
+ * GET /api/media/{points,tmp}/<mediaId>/<file> → 302 to a short-lived presigned URL in the bucket.
+ * The bucket stays private; `mediaUrl()` points stored media here. `tmp/` keys are allowed so the
+ * point form can preview a file before the point is saved.
  */
 export async function GET(_req: NextRequest, ctx: RouteContext<"/api/media/[...key]">) {
   await connection()

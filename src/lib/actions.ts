@@ -16,7 +16,7 @@ import {
   deleteStoredMedia,
   MediaError,
   removedStorageKeys,
-  verifyStoredMedia,
+  saveWithStoredMedia,
   type MediaUpload,
   type MediaUploadRequest,
 } from "@/lib/storage/media"
@@ -62,8 +62,9 @@ async function run<T>(fn: () => Promise<T>, { revalidate = true } = {}): Promise
 export async function createPoint(input: PointInput): Promise<ActionResult<Point>> {
   return run(async () => {
     const data = pointInputSchema.parse(input)
-    const media = await verifyStoredMedia(getStorage(), mediaMaxBytes(), data.media)
-    return store.points.create({ ...data, media })
+    return saveWithStoredMedia(getStorage(), mediaMaxBytes(), data.media, [], (media) =>
+      store.points.create({ ...data, media }),
+    )
   })
 }
 
@@ -73,8 +74,9 @@ export async function updatePoint(id: string, input: PointInput): Promise<Action
     const previous = await store.points.get(id)
     if (!previous) throw new NotFoundError("Point", id)
     const storage = getStorage()
-    const media = await verifyStoredMedia(storage, mediaMaxBytes(), data.media, previous.media)
-    const point = await store.points.update(id, { ...data, media })
+    const point = await saveWithStoredMedia(storage, mediaMaxBytes(), data.media, previous.media, (media) =>
+      store.points.update(id, { ...data, media }),
+    )
     // Only after the point no longer references them.
     await deleteStoredMedia(storage, removedStorageKeys(previous.media, point.media))
     return point
@@ -93,8 +95,9 @@ export async function deletePoint(id: string): Promise<ActionResult> {
 /* ───────────── media uploads ───────────── */
 
 /**
- * Step 1 of an upload: check the file and get a presigned PUT. The browser then PUTs the file
- * to `upload.url` and adds `asset` to the point; saving the point verifies the stored file.
+ * Step 1 of an upload: check the file and get a presigned PUT to a `tmp/` key. The browser then PUTs
+ * the file to `upload.url` and adds `asset` to the point; saving the point verifies the stored file
+ * and moves it to `points/`.
  */
 export async function createMediaUpload(input: MediaUploadRequest): Promise<ActionResult<MediaUpload>> {
   // Nothing changes until the point is saved, so no revalidation.

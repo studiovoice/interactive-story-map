@@ -1,6 +1,7 @@
 import "server-only"
 
 import {
+  CopyObjectCommand,
   DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
@@ -13,7 +14,7 @@ import type { PresignedUpload, StorageProvider } from "./index"
 
 /**
  * S3-compatible storage: RustFS locally, Amazon S3 or Cloudflare R2 in production.
- * Only uses what all three support: presigned PUT/GET, HEAD, DELETE. Configured from S3_* env vars
+ * Only uses what all three support: presigned PUT/GET, HEAD, COPY, DELETE. Configured from S3_* env vars
  * (see .env.example).
  */
 export class S3Storage implements StorageProvider {
@@ -81,6 +82,17 @@ export class S3Storage implements StorageProvider {
       if (status === 404 || (err as Error).name === "NotFound") return null
       throw err
     }
+  }
+
+  async copy(from: string, to: string) {
+    await this.client.send(
+      new CopyObjectCommand({
+        Bucket: this.bucket,
+        // "<bucket>/<key>", URL-encoded per segment. Keeps the source's Content-Type (MetadataDirective COPY).
+        CopySource: [this.bucket, ...from.split("/")].map(encodeURIComponent).join("/"),
+        Key: to,
+      }),
+    )
   }
 
   async delete(storageKey: string) {
