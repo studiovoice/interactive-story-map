@@ -11,6 +11,7 @@ import { MapMarker } from "@/components/map/map-marker"
 import { MapView } from "@/components/map/map-view"
 import { useThemeColors } from "@/components/map/use-theme-colors"
 import { PointMedia } from "@/components/points/point-media"
+import { PointMediaViewer } from "@/components/points/point-media-viewer"
 import { Button } from "@/components/ui/button"
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty"
 import { hasVideo } from "@/lib/points/media"
@@ -511,7 +512,7 @@ function StoryCard({
       {ch.chapter.narrative && <p className="text-[12.5px] text-muted-foreground">{ch.chapter.narrative}</p>}
       {it ? (
         <>
-          <PointMedia point={it.point} controls className="aspect-video w-full shrink-0 rounded-md" />
+          <PointMediaViewer point={it.point} className="shrink-0" />
           <div>
             <div className="text-[12.5px] leading-snug font-medium">{it.point.title}</div>
             <div className="mt-0.5 text-[11px] text-muted-foreground">

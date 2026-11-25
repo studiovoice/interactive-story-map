@@ -1,6 +1,6 @@
 import { FileTextIcon, MicIcon, PlayIcon } from "lucide-react"
 import type { MediaAsset, Point } from "@/lib/domain/schema"
-import { coverMedia } from "@/lib/points/media"
+import { coverMedia, isVisual } from "@/lib/points/media"
 import { mediaUrl } from "@/lib/storage/client"
 import { parseLocal, timeOfDay } from "@/lib/time"
 import { cn } from "@/lib/utils"
@@ -84,36 +84,36 @@ export function formatDurationSec(sec?: number) {
 }
 
 /**
- * The point's cover (see `coverMedia`). Shows the real image/video when it has a URL; a point
- * with no files gets the generated placeholder scene.
+ * The point's cover (see `coverMedia`), for thumbnails and previews: the real image or video
+ * frame when it has a URL, an icon for audio or documents, and the generated placeholder scene
+ * for a point with no files. To show every file, use `PointMediaViewer`.
  */
 export function PointMedia({
   point,
   className,
-  controls = false,
   badge = true,
 }: {
   point: Point
   className?: string
-  /** Render a playable <video>/<audio> instead of a poster. */
-  controls?: boolean
   /** The "Photo"/"Video" label and play icon. Off for small thumbnails. */
   badge?: boolean
 }) {
   const media = coverMedia(point.media)
   const url = media ? mediaUrl(media) : null
   const duration = formatDurationSec(media?.durationSec)
+  const more = point.media.filter(isVisual).length - 1
 
   let content: React.ReactNode
   if (media?.kind === "image" && url) {
     // eslint-disable-next-line @next/next/no-img-element -- arbitrary external URLs
     content = <img src={url} alt={point.title} className="size-full object-cover" />
-  } else if (media?.kind === "video" && url && controls) {
-    content = <video src={url} controls className="size-full bg-black object-contain" />
-  } else if (media?.kind === "audio" && url && controls) {
+  } else if (media?.kind === "video" && url) {
+    // #t: show a frame from just after the start instead of a blank first frame.
+    content = <video src={`${url}#t=0.1`} preload="metadata" muted className="size-full object-cover" />
+  } else if (media?.kind === "audio") {
     content = (
-      <span className="grid size-full place-items-center bg-muted p-3">
-        <audio src={url} controls className="w-full" />
+      <span className="grid size-full place-items-center bg-muted text-muted-foreground">
+        <MicIcon className="size-6" />
       </span>
     )
   } else if (!media && point.media.length) {
@@ -123,29 +123,35 @@ export function PointMedia({
         <FileTextIcon className="size-6" />
       </span>
     )
-  } else if (media?.kind === "audio") {
-    content = (
-      <span className="grid size-full place-items-center bg-muted text-muted-foreground">
-        <MicIcon className="size-6" />
-      </span>
-    )
   } else {
     content = <PointScene point={point} />
   }
 
   const isVideo = media?.kind === "video"
-  const showPlay = badge && isVideo && !(controls && url)
   return (
     <span className={cn("relative block overflow-hidden bg-muted", className)}>
       {content}
-      {showPlay && (
+      {badge && isVideo && (
         <span className="absolute inset-0 m-auto grid size-8 place-items-center rounded-full bg-black/60 text-white">
           <PlayIcon className="size-3.5 fill-current" />
         </span>
       )}
-      {badge && (isVideo || media?.kind === "image") && !(controls && url && isVideo) && (
+      {badge && (isVideo || media?.kind === "image") && (
         <span className="absolute bottom-1.5 left-1.5 rounded-full bg-black/65 px-1.5 py-px text-[10.5px] font-medium text-white">
           {isVideo ? `Video${duration ? ` · ${duration}` : ""}` : "Photo"}
+        </span>
+      )}
+      {more > 0 && (
+        <span
+          className={cn(
+            "absolute rounded-full bg-black/65 font-medium text-white tabular-nums",
+            badge
+              ? "right-1.5 bottom-1.5 px-1.5 py-px text-[10.5px]"
+              : "right-0.5 bottom-0.5 px-1 text-[9px] leading-3.5",
+          )}
+          aria-label={`${more} more`}
+        >
+          +{more}
         </span>
       )}
     </span>

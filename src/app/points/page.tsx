@@ -15,7 +15,7 @@ export default function PointsPage() {
     <PageContainer>
       <PageHeader
         title="Points"
-        description="Every upload: a photo, video, audio clip or note at a place and time. Points can be used in any number of stories."
+        description="Every upload: photos, videos, audio clips or a note at a place and time. Points can be used in any number of stories."
         actions={
           <Button asChild>
             <Link href="/points/new">
