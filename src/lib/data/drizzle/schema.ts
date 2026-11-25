@@ -23,7 +23,6 @@ import {
 import {
   chapterConnections,
   locationPrecisions,
-  pointKinds,
   storyStatuses,
   timePrecisions,
   type Camera,
@@ -44,7 +43,6 @@ export const points = pgTable(
     id: text("id").primaryKey(),
     title: text("title").notNull(),
     description: text("description").notNull().default(""),
-    kind: text("kind").$type<(typeof pointKinds)[number]>().notNull(),
     /** [lng, lat], SRID 4326. For obscured points this is the shifted center, never the true spot. */
     location: geometry("location", { type: "point", mode: "tuple", srid: 4326 }).$type<LngLat>().notNull(),
     locationPrecision: text("location_precision").$type<(typeof locationPrecisions)[number]>().notNull(),
@@ -68,7 +66,6 @@ export const points = pgTable(
     index("points_location_idx").using("gist", t.location),
     index("points_search_text_idx").using("gin", t.searchText.op("gin_trgm_ops")),
     index("points_updated_at_idx").on(t.updatedAt.desc()),
-    check("points_kind_check", oneOf(t.kind, pointKinds)),
     check("points_location_precision_check", oneOf(t.locationPrecision, locationPrecisions)),
     check("points_time_precision_check", oneOf(t.timePrecision, timePrecisions)),
   ],

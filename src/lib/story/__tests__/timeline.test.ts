@@ -6,7 +6,6 @@ const point = (id: string, capturedAt: string | null): Point => ({
   id,
   title: id,
   description: "",
-  kind: "photo",
   location: [0, 0],
   locationPrecision: "exact",
   locationRadiusM: null,

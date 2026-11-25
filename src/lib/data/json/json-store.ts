@@ -152,7 +152,7 @@ export function createJsonStore(): DataStore {
           (p): MapPoint => ({
             id: p.id,
             title: p.title,
-            kind: p.kind,
+            mediaKinds: p.media.map((m) => m.kind),
             location: p.location,
             locationPrecision: p.locationPrecision,
             locationRadiusM: p.locationRadiusM,

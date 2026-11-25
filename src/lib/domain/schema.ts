@@ -55,10 +55,6 @@ export type MediaAsset = z.infer<typeof mediaAssetSchema>
 
 /* ───────────────────────── Points ───────────────────────── */
 
-export const pointKinds = ["photo", "video", "audio", "note"] as const
-export const pointKindSchema = z.enum(pointKinds)
-export type PointKind = z.infer<typeof pointKindSchema>
-
 export const timePrecisions = ["exact", "approximate"] as const
 export const timePrecisionSchema = z.enum(timePrecisions)
 export type TimePrecision = z.infer<typeof timePrecisionSchema>
@@ -77,7 +73,6 @@ export type LocationPrecision = z.infer<typeof locationPrecisionSchema>
 export const pointInputSchema = z.object({
   title: z.string().trim().min(1, "Give the point a title").max(200),
   description: z.string().trim().max(5000).default(""),
-  kind: pointKindSchema.default("photo"),
   location: lngLatSchema,
   locationPrecision: locationPrecisionSchema.default("exact"),
   /** Radius of the area in metres; null when the location is exact. */
@@ -88,6 +83,7 @@ export const pointInputSchema = z.object({
   timePrecision: timePrecisionSchema.default("exact"),
   tags: z.array(z.string().trim().min(1).max(40)).max(30).default([]),
   contributor: z.string().trim().max(120).default(""),
+  /** In display order: the first image or video is the cover (see lib/points/media.ts). */
   media: z.array(mediaAssetSchema).max(20).default([]),
 })
 export type PointInput = z.input<typeof pointInputSchema>
@@ -228,7 +224,9 @@ export type PointUsage = {
  * The few fields the map needs to draw a point. Pages that show many points send these
  * instead of full points; details are loaded when one is opened (`PointDetail`).
  */
-export type MapPoint = Pick<Point, "id" | "title" | "kind" | "location" | "locationPrecision" | "locationRadiusM"> & {
+export type MapPoint = Pick<Point, "id" | "title" | "location" | "locationPrecision" | "locationRadiusM"> & {
+  /** The kind of each attached file, in order. A point's "type" is derived from these. */
+  mediaKinds: MediaKind[]
   /** Used by at least one story's chapter. */
   inStory: boolean
 }
