@@ -45,6 +45,17 @@ export function sanitizeFileName(fileName: string): string {
   return safeExt ? `${safeBase}.${safeExt}` : safeBase
 }
 
+/**
+ * File name used in the key: the media kind plus the original extension (`image.jpg`, `video.mp4`).
+ * The uploader's own file name stays out of URLs, since it can hold names, dates or device details.
+ * The media id already makes the key unique.
+ */
+export function storedFileName(kind: MediaKind, fileName: string): string {
+  const name = sanitizeFileName(fileName)
+  const dot = name.lastIndexOf(".")
+  return dot > 0 ? `${kind}${name.slice(dot)}` : kind
+}
+
 const MEDIA_ID = /^med_[a-z0-9]{12}$/
 const KEY = /^(tmp|points)\/(med_[a-z0-9]{12})\/([a-zA-Z0-9._-]{1,100})$/
 
@@ -52,9 +63,9 @@ export const isMediaId = (id: string) => MEDIA_ID.test(id)
 
 /**
  * Where files live in the bucket:
- * - `tmp/<mediaId>/<file>`: just uploaded, not on a saved point yet. A bucket lifecycle rule deletes
+ * - `tmp/<mediaId>/<kind>.<ext>`: just uploaded, not on a saved point yet. A bucket lifecycle rule deletes
  *   these after a day (scripts/storage/lifecycle.json), so abandoned uploads clean themselves up.
- * - `points/<mediaId>/<file>`: on a saved point. Files only get here by being moved out of `tmp/` when
+ * - `points/<mediaId>/<kind>.<ext>`: on a saved point. Files only get here by being moved out of `tmp/` when
  *   a point is saved, so each one belongs to exactly one point.
  */
 export type KeyPrefix = "tmp" | "points"

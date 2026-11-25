@@ -15,6 +15,7 @@ import {
   parseStorageKey,
   sanitizeFileName,
   storageKeyFor,
+  storedFileName,
   uploadKeyFor,
 } from "@/lib/storage/rules"
 
@@ -86,6 +87,12 @@ describe("rules", () => {
     expect(() => uploadKeyFor("nope", "x")).toThrow()
   })
 
+  it("keeps the uploader's file name out of keys", () => {
+    expect(storedFileName("image", "IMG_20260512 Jane Doe home.JPG")).toBe("image.jpg")
+    expect(storedFileName("video", "clip.final.mp4")).toBe("video.mp4")
+    expect(storedFileName("document", "notes")).toBe("document")
+  })
+
   it("maps MIME types to media kinds", () => {
     expect(mediaKindForMime("image/JPEG")).toBe("image")
     expect(mediaKindForMime("video/mp4")).toBe("video")
@@ -97,14 +104,11 @@ describe("createMediaUpload", () => {
   it("presigns a PUT for an allowed file, to a tmp/ key", async () => {
     const s = fakeStorage()
     const res = await createMediaUpload(s, 10 * MB, { fileName: "Bridge.jpg", mimeType: "image/jpeg", size: 1000 })
-    expect(res.asset).toMatchObject({
-      kind: "image",
-      source: "storage",
-      fileName: "Bridge.jpg",
-      mimeType: "image/jpeg",
-    })
+    expect(res.asset).toMatchObject({ kind: "image", source: "storage", mimeType: "image/jpeg" })
+    // The uploader's file name isn't saved anywhere.
+    expect(res.asset).not.toHaveProperty("fileName")
     expect(res.asset.id).toMatch(/^med_[a-z0-9]{12}$/)
-    expect(res.asset.storageKey).toBe(`tmp/${res.asset.id}/Bridge.jpg`)
+    expect(res.asset.storageKey).toBe(`tmp/${res.asset.id}/image.jpg`)
     expect(s.createUpload).toHaveBeenCalledWith({
       storageKey: res.asset.storageKey,
       mimeType: "image/jpeg",
@@ -147,7 +151,9 @@ describe("verifyStoredMedia", () => {
 
   it("rejects missing files and keys that don't match the asset", async () => {
     const s = fakeStorage({ "tmp/med_bbbbbbbbbbbb/a.jpg": { size: 1, contentType: "image/jpeg" } })
-    await expect(verifyStoredMedia(s, MB, [uploaded("med_aaaaaaaaaaaa")])).rejects.toThrow(/isn't in storage/)
+    await expect(
+      verifyStoredMedia(s, MB, [uploaded("med_aaaaaaaaaaaa", "a.jpg", { fileName: undefined })]),
+    ).rejects.toThrow("An uploaded image isn't in storage")
     await expect(
       verifyStoredMedia(s, MB, [{ ...uploaded("med_aaaaaaaaaaaa"), storageKey: "tmp/med_bbbbbbbbbbbb/a.jpg" }]),
     ).rejects.toThrow(/isn't valid/)

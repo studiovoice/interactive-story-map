@@ -4,7 +4,7 @@ import { z } from "zod"
 import { newId } from "@/lib/ids"
 import type { MediaAsset, MediaKind } from "@/lib/domain/schema"
 import type { PresignedUpload, StorageProvider } from "./index"
-import { mediaIdFromKey, mediaKindForMime, parseStorageKey, storageKeyFor, uploadKeyFor } from "./rules"
+import { mediaIdFromKey, mediaKindForMime, parseStorageKey, storageKeyFor, storedFileName, uploadKeyFor } from "./rules"
 
 /** A problem the user can fix (shown as the error message of the action). */
 export class MediaError extends Error {
@@ -24,7 +24,10 @@ export const mediaUploadRequestSchema = z.object({
 export type MediaUploadRequest = z.input<typeof mediaUploadRequestSchema>
 
 export type MediaUpload = {
-  /** The new asset (with its `tmp/` key), ready to add to the point once the upload has finished. */
+  /**
+   * The new asset (with its `tmp/` key), ready to add to the point once the upload has finished.
+   * No `fileName`: the uploader's file name is never saved (labels are public; see the point form).
+   */
   asset: MediaAsset & { source: "storage"; storageKey: string }
   upload: PresignedUpload
 }
@@ -42,9 +45,9 @@ export async function createMediaUpload(
   if (size > maxBytes) throw new MediaError(`That file is too big (the limit is ${formatMb(maxBytes)}).`)
 
   const id = newId("med")
-  const storageKey = uploadKeyFor(id, fileName)
+  const storageKey = uploadKeyFor(id, storedFileName(kind, fileName))
   const upload = await storage.createUpload({ storageKey, mimeType, size })
-  return { asset: { id, kind, source: "storage", storageKey, fileName, mimeType }, upload }
+  return { asset: { id, kind, source: "storage", storageKey, mimeType }, upload }
 }
 
 const sameStored = (a: MediaAsset, b: MediaAsset) =>
@@ -78,18 +81,20 @@ export async function verifyStoredMedia(
       const parsed = parseStorageKey(key)
       if (parsed?.prefix !== "tmp" || parsed.mediaId !== asset.id)
         throw new MediaError("An uploaded file isn't valid. Remove it and upload it again.")
+      // File names aren't saved, so errors name the file by its label or its kind.
+      const name = asset.fileName ? `“${asset.fileName}”` : `An uploaded ${asset.kind}`
       const head = await storage.head(key)
       if (!head)
         throw new MediaError(
-          `“${asset.fileName ?? key}” isn't in storage. It may still be uploading, or it expired: remove it and upload it again.`,
+          `${name} isn't in storage. It may still be uploading, or it expired: remove it and upload it again.`,
         )
 
       const contentType = head.contentType?.split(";")[0].trim().toLowerCase() ?? ""
       const kind = mediaKindForMime(contentType)
       const problem = !kind
-        ? `“${asset.fileName ?? key}” has a file type that isn't allowed.`
+        ? `${name} has a file type that isn't allowed.`
         : head.size > maxBytes
-          ? `“${asset.fileName ?? key}” is too big (the limit is ${formatMb(maxBytes)}).`
+          ? `${name} is too big (the limit is ${formatMb(maxBytes)}).`
           : null
       if (problem) {
         await deleteStoredMedia(storage, [key])
