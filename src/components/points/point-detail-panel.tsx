@@ -10,7 +10,8 @@ import { isFuzzy, locationPrecisionLabel } from "@/lib/location"
 import { mediaSummary } from "@/lib/points/media"
 import { formatCaptured } from "@/lib/time"
 import { cn } from "@/lib/utils"
-import { AttachmentList, PointMedia } from "./point-media"
+import { AttachmentList } from "./point-media"
+import { PointMediaViewer } from "./point-media-viewer"
 
 export function PointDetailPanel({
   summary,
@@ -153,7 +154,7 @@ export function PointDetailPanel({
 function PointBody({ point }: { point: Point }) {
   return (
     <>
-      <PointMedia point={point} controls className="aspect-video w-full shrink-0 rounded-md" />
+      <PointMediaViewer point={point} className="shrink-0" />
       <h2 className="text-[15px] leading-tight font-semibold tracking-tight">{point.title}</h2>
       {point.description && <p className="text-[12.5px] leading-relaxed">{point.description}</p>}
       <dl className="grid grid-cols-[auto_1fr] gap-x-2.5 gap-y-1 text-xs">
