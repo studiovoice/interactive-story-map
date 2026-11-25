@@ -17,6 +17,27 @@ import { DAY, HOUR, MINUTE, formatDuration, formatHour, formatShortDate, parseLo
 const LONG_GAP = 45 * MINUTE
 /** Width of a compressed gap on the track. */
 const GAP_WIDTH = 0.04
+/**
+ * Smallest distance between two points on the track (about a tick's width). Points with the
+ * same time, or an untimed point that borrows a neighbour's time, would otherwise share one
+ * spot: their ticks overlap and jumping to the earlier one shows the later one instead.
+ */
+const MIN_ITEM_GAP = 0.012
+
+/**
+ * Push sorted positions apart to at least `minGap`, staying inside [p0, p1). Moves them as
+ * little as needed: forward first, then back from the end if that ran past the chapter.
+ */
+function spreadPositions(pos: number[], p0: number, p1: number): number[] {
+  const n = pos.length
+  if (n < 2) return pos
+  const gap = Math.min(MIN_ITEM_GAP, (p1 - p0) / (n + 1))
+  const out = [...pos]
+  for (let k = 1; k < n; k++) out[k] = Math.max(out[k], out[k - 1] + gap)
+  out[n - 1] = Math.min(out[n - 1], p1 - gap)
+  for (let k = n - 2; k >= 0; k--) out[k] = Math.min(out[k], out[k + 1] - gap)
+  return out
+}
 
 export type TimelineItem = {
   /** Index in `timeline.items` (playback order). */
@@ -149,16 +170,22 @@ export function buildTimeline(story: Pick<StoryDetail, "chapters">): Timeline {
     const p1 = p0 + (weights[ci] / totalWeight) * chapterSpace
     const span = p1 - p0
     const n = d.entries.length
+    const positions = spreadPositions(
+      d.entries.map((e, k) =>
+        d.T0 !== null && e.time !== null && d.T1! > d.T0
+          ? p0 + ((e.time - d.T0) / (d.T1! - d.T0)) * span
+          : p0 + span * (n === 1 ? 0.2 : 0.08 + (0.72 * k) / (n - 1)),
+      ),
+      p0,
+      p1,
+    )
     const chapterItems = d.entries.map((e, k): TimelineItem => {
-      let pos: number
-      if (d.T0 !== null && e.time !== null && d.T1! > d.T0) pos = p0 + ((e.time - d.T0) / (d.T1! - d.T0)) * span
-      else pos = p0 + span * (n === 1 ? 0.2 : 0.08 + (0.72 * k) / (n - 1))
       return {
         index: items.length + k,
         chapterIndex: ci,
         point: e.point,
         note: e.note,
-        pos,
+        pos: positions[k],
         time: e.time,
         approx: e.approx,
       }
