@@ -28,6 +28,11 @@ export function TimelineTrack({
 }) {
   const trackRef = useRef<HTMLDivElement>(null)
   const dragging = useRef(false)
+  /**
+   * The tick a press started on, and where. Read on release: with pointer capture on the track,
+   * pointerup targets the track itself, never the tick.
+   */
+  const pressed = useRef<{ item: number; x: number } | null>(null)
   const [hover, setHover] = useState<number | null>(null)
   const ci = chapterIndexAt(timeline, p)
   const t = timeAt(timeline, p)
@@ -83,6 +88,8 @@ export function TimelineTrack({
       className="relative mx-2 h-[74px] cursor-pointer touch-none select-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
       onPointerDown={(e) => {
         dragging.current = true
+        const tick = (e.target as HTMLElement).closest<HTMLElement>("[data-item]")
+        pressed.current = tick ? { item: Number(tick.dataset.item), x: e.clientX } : null
         trackRef.current!.setPointerCapture(e.pointerId)
         onScrubStart()
         onScrub(pAt(e.clientX))
@@ -94,9 +101,12 @@ export function TimelineTrack({
       }}
       onPointerUp={(e) => {
         dragging.current = false
-        const tick = (e.target as HTMLElement).closest<HTMLElement>("[data-item]")
-        if (tick) onJumpToItem(Number(tick.dataset.item))
-        onScrubEnd(!!tick)
+        const press = pressed.current
+        pressed.current = null
+        // A tap on a tick jumps to its point; a drag that started on one is a scrub.
+        const tapped = press !== null && Math.abs(e.clientX - press.x) < 4
+        if (tapped) onJumpToItem(press.item)
+        onScrubEnd(tapped)
       }}
       onPointerLeave={() => setHover(null)}
       onKeyDown={(e) => {
