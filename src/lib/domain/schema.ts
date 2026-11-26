@@ -231,6 +231,12 @@ export type MapPoint = Pick<Point, "id" | "title" | "location" | "locationPrecis
   inStory: boolean
 }
 
+/** A row of the points table: the point plus how many stories use it. */
+export type PointListRow = Point & { storyCount: number }
+
+/** One page of the points table. `total` counts every match, not just this page. */
+export type PointPage = { rows: PointListRow[]; total: number }
+
 /** Everything the point details panel shows. */
 export type PointDetail = { point: Point; usage: PointUsage[] }
 

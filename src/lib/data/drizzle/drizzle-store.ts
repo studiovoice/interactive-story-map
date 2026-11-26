@@ -3,7 +3,7 @@
  * `src/lib/data/__tests__` check both). Takes the db so tests can pass PGlite or a test database;
  * the app gets its db from `./client.ts`.
  */
-import { asc, desc, eq, inArray, sql, type SQL } from "drizzle-orm"
+import { asc, count, countDistinct, desc, eq, inArray, sql, type SQL } from "drizzle-orm"
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core"
 import {
   chapterDraftSchema,
@@ -22,7 +22,7 @@ import {
 } from "@/lib/domain/schema"
 import { newId } from "@/lib/ids"
 import { normalizePointLocation } from "@/lib/location"
-import { NotFoundError, type DataStore } from "@/lib/data/repository"
+import { NotFoundError, pageBounds, type DataStore } from "@/lib/data/repository"
 import {
   fromCollection,
   fromPoint,
@@ -219,6 +219,37 @@ export function createDrizzleStore(db: Db): DataStore {
           ids: matches.map((m) => m.id),
           total: matches[0]?.total ?? 0,
           top: topIds.flatMap((id) => byId.get(id) ?? []),
+        }
+      },
+      async page(opts) {
+        const { limit, offset } = pageBounds(opts)
+        const q = opts.q?.trim()
+        const where = q ? sql`${points.searchText} like ${likePattern(q)}` : undefined
+        // Two queries: a window count would make Postgres read every match before the limit.
+        // `nulls last` matches points_updated_at_idx, so the first pages read it in order.
+        const [rows, [{ total }]] = await Promise.all([
+          db
+            .select()
+            .from(points)
+            .where(where)
+            .orderBy(sql`${points.updatedAt} desc nulls last`, asc(points.id))
+            .limit(limit)
+            .offset(offset),
+          db.select({ total: count() }).from(points).where(where),
+        ])
+        const ids = rows.map((r) => r.id)
+        const counts = ids.length
+          ? await db
+              .select({ pointId: chapterPoints.pointId, n: countDistinct(chapters.storyId) })
+              .from(chapterPoints)
+              .innerJoin(chapters, eq(chapters.id, chapterPoints.chapterId))
+              .where(inArray(chapterPoints.pointId, ids))
+              .groupBy(chapterPoints.pointId)
+          : []
+        const storyCount = new Map(counts.map((c) => [c.pointId, c.n]))
+        return {
+          rows: rows.map((r) => ({ ...toPoint(r), storyCount: storyCount.get(r.id) ?? 0 })),
+          total,
         }
       },
     },

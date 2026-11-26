@@ -18,7 +18,7 @@ import { newId } from "@/lib/ids"
 import { distance } from "@/lib/geo"
 import { normalizePointLocation } from "@/lib/location"
 import { matchesQuery } from "@/lib/points/match"
-import { NotFoundError, type DataStore } from "@/lib/data/repository"
+import { NotFoundError, pageBounds, type DataStore } from "@/lib/data/repository"
 import { readDb, writeDb, type DbFile } from "./file-db"
 
 const now = () => new Date().toISOString()
@@ -64,6 +64,20 @@ function usageMap(db: DbFile, onlyId?: string): Record<string, PointUsage[]> {
   return out
 }
 
+
+/** The stories each of `pointIds` is used in. */
+function storiesByPoint(db: DbFile, pointIds: Set<string>) {
+  const storyOf = new Map(db.chapters.map((c) => [c.id, c.storyId]))
+  const out = new Map<string, Set<string>>()
+  for (const cp of db.chapterPoints) {
+    const storyId = pointIds.has(cp.pointId) ? storyOf.get(cp.chapterId) : undefined
+    if (!storyId) continue
+    let stories = out.get(cp.pointId)
+    if (!stories) out.set(cp.pointId, (stories = new Set()))
+    stories.add(storyId)
+  }
+  return out
+}
 
 function storyDetail(db: DbFile, storyId: string): StoryDetail | null {
   const story = db.stories.find((s) => s.id === storyId)
@@ -177,6 +191,19 @@ export function createJsonStore(): DataStore {
           ids: matches.slice(0, maxIds).map((p) => p.id),
           total: matches.length,
           top: matches.slice(0, limit),
+        }
+      },
+      async page(opts) {
+        const db = await readDb()
+        const { limit, offset } = pageBounds(opts)
+        const matches = db.points
+          .filter((p) => matchesQuery(p, opts.q ?? ""))
+          .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+        const rows = matches.slice(offset, offset + limit)
+        const storiesOf = storiesByPoint(db, new Set(rows.map((p) => p.id)))
+        return {
+          rows: rows.map((p) => ({ ...p, storyCount: storiesOf.get(p.id)?.size ?? 0 })),
+          total: matches.length,
         }
       },
     },

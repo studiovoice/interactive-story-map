@@ -276,6 +276,62 @@ export function describeStoreContract(name: string, setup: () => Promise<StoreHa
       })
     })
 
+    /* ───────────── page ───────────── */
+
+    describe("page", () => {
+      it("pages most recently updated first, with the total", async () => {
+        const made = []
+        for (const title of ["A", "B", "C", "D", "E"]) {
+          made.push(await store.points.create(pointInput({ title })))
+          await sleep(5)
+        }
+        await store.points.update(made[1].id, { title: "B2" })
+        const titles = async (page: number) =>
+          (await store.points.page({ page, pageSize: 2 })).rows.map((p) => p.title)
+        expect(await titles(1)).toEqual(["B2", "E"])
+        expect(await titles(2)).toEqual(["D", "C"])
+        expect(await titles(3)).toEqual(["A"])
+        expect(await store.points.page({ page: 4, pageSize: 2 })).toEqual({ rows: [], total: 5 })
+        const first = (await store.points.page({ pageSize: 2 })).rows[0]
+        expect(first).toEqual({ ...(await store.points.get(made[1].id)), storyCount: 0 })
+      })
+
+      it("filters like search", async () => {
+        await store.points.create(pointInput({ title: "Bridge crossing" }))
+        await store.points.create(pointInput({ title: "x", description: "On the BRIDGE" }))
+        await store.points.create(pointInput({ title: "y", placeName: "Brooklyn Bridge Park" }))
+        await store.points.create(pointInput({ title: "z", tags: ["bridges"] }))
+        await store.points.create(pointInput({ title: "100% sure" }))
+        const res = await store.points.page({ q: " bridge ", pageSize: 3 })
+        expect(res.total).toBe(4)
+        expect(res.rows).toHaveLength(3)
+        expect((await store.points.page({ q: "%" })).total).toBe(1)
+        expect((await store.points.page({ q: "_" })).total).toBe(0)
+        expect((await store.points.page({ q: "  " })).total).toBe(5)
+      })
+
+      it("counts the distinct stories each point is in", async () => {
+        const { collection, story, points } = await storyWithPoints(2)
+        const other = await store.stories.create({ collectionId: collection.id, title: "Other" })
+        await store.stories.saveChapters(story.id, [
+          { id: "ch_one000000000", title: "One", points: [{ pointId: points[0].id }] },
+          { id: "ch_two000000000", title: "Two", points: [{ pointId: points[0].id }] },
+        ])
+        await store.stories.saveChapters(other.id, [
+          { id: "ch_thr000000000", title: "Three", points: [{ pointId: points[0].id }] },
+        ])
+        const loose = await store.points.create(pointInput({ title: "Loose" }))
+        const counts = Object.fromEntries((await store.points.page({})).rows.map((r) => [r.id, r.storyCount]))
+        expect(counts).toEqual({ [points[0].id]: 2, [points[1].id]: 0, [loose.id]: 0 })
+      })
+
+      it("treats bad paging input as the first page of the default size", async () => {
+        await store.points.create(pointInput())
+        expect((await store.points.page({ page: 0, pageSize: 0 })).rows).toHaveLength(1)
+        expect((await store.points.page({ page: Number.NaN, pageSize: -3 })).rows).toHaveLength(1)
+      })
+    })
+
     /* ───────────── collections ───────────── */
 
     describe("collections", () => {
