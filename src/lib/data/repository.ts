@@ -11,6 +11,7 @@ import type {
   LngLat,
   MapPoint,
   PointDetail,
+  PointPage,
   PointSearchResult,
   CollectionInput,
   CollectionSummary,
@@ -41,6 +42,27 @@ export interface PointRepository {
   detail(id: string): Promise<PointDetail | null>
   /** Text search over title, description, place name and tags. */
   search(opts: PointSearchOptions): Promise<PointSearchResult>
+  /**
+   * One page of points, most recently updated first, for the points table. `q` matches like
+   * `search`. A page past the end has no rows (but still the total).
+   */
+  page(opts: PointPageOptions): Promise<PointPage>
+}
+
+export type PointPageOptions = {
+  q?: string
+  /** 1-based. */
+  page?: number
+  pageSize?: number
+}
+
+export const DEFAULT_PAGE_SIZE = 50
+
+/** Clamp paging input to whole numbers ≥ 1. */
+export function pageBounds({ page = 1, pageSize = DEFAULT_PAGE_SIZE }: PointPageOptions) {
+  const size = Math.max(1, Math.floor(pageSize) || DEFAULT_PAGE_SIZE)
+  const n = Math.max(1, Math.floor(page) || 1)
+  return { limit: size, offset: (n - 1) * size }
 }
 
 export type PointSearchOptions = {
