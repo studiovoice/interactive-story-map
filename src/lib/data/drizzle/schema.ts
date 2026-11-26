@@ -1,6 +1,6 @@
 /**
- * Postgres tables for the drizzle driver. They mirror the zod schemas in
- * `src/lib/domain/schema.ts` (and the arrays of the json driver's `DbFile`).
+ * Postgres tables. They mirror the zod schemas in `src/lib/domain/schema.ts` (and the arrays of a
+ * snapshot, `src/lib/data/snapshot.ts`).
  *
  * After changing this file: `pnpm db:generate` writes a new migration to `drizzle/`,
  * `pnpm db:migrate` applies it. Not `server-only`: scripts and tests import it too.

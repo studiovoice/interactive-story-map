@@ -33,7 +33,7 @@ pnpm install
 cp .env.example .env.local   # Postgres + uploads, matching docker-compose.yml
 pnpm services:up             # start Postgres + RustFS, create the bucket
 pnpm db:migrate              # create the tables
-pnpm db:seed                 # load data/seed.json (or: pnpm db:seed data/db.json to import json-driver data)
+pnpm db:seed                 # load data/seed.json (or: pnpm db:seed data/db.json to import old json-driver data)
 pnpm dev                     # http://localhost:3000
 ```
 
@@ -41,11 +41,9 @@ The seed is the prototype's fictional Brooklyn Bridge story plus 26 unrelated ne
 http://localhost:9001 (log in with `rustfs-dev` / `rustfs-dev-secret`). `pnpm services:down` stops the services and
 keeps the data; `pnpm services:reset` wipes it. `pnpm db:reset` re-seeds the database.
 
-### Without Docker
-
-Set `DATA_DRIVER=json` and `NEXT_PUBLIC_STORAGE_DRIVER=none` in `.env.local` (or skip `.env.local` and run
-`DATA_DRIVER=json pnpm dev`). Data then lives in `data/db.json` (git-ignored), created from `data/seed.json` on first
-run; `pnpm data:reset` puts it back to the seed. Media can only be linked by URL.
+Postgres is required. Without Docker, point `DATABASE_URL` at any Postgres with PostGIS and `pg_trgm` (a local install
+or a hosted one such as Neon). Without a bucket, set `NEXT_PUBLIC_STORAGE_DRIVER=none`; media can then only be linked
+by URL.
 
 Other scripts: `pnpm build`, `pnpm lint`, `pnpm typecheck`, `pnpm format`, `pnpm test` (see "Tests"),
 `pnpm db:generate` (new migration after changing the schema), `pnpm db:studio`.
@@ -76,7 +74,7 @@ src/
     ui/                     shadcn/ui components (generated)
   lib/
     domain/schema.ts        zod schemas + types for everything (single source of truth)
-    data/                   persistence: DataStore interface, json and drizzle (Postgres) drivers, contract tests
+    data/                   persistence: DataStore interface, drizzle (Postgres) implementation, contract tests
     storage/                object storage: S3 provider, upload rules, client-safe media URLs
     story/timeline.ts       pure: story → playback timeline (chapter spans, compressed gaps, positions, clock, route front)
     actions.ts              server actions (all mutations)
@@ -90,21 +88,20 @@ docs/plans/                 plans and decisions
 prototype/                  original HTML prototypes
 ```
 
-## Persistence: JSON file or Postgres
+## Persistence: Postgres
 
 Pages and server actions only use `store` from `src/lib/data`, which implements the `DataStore` interface in
-[`src/lib/data/repository.ts`](src/lib/data/repository.ts). `DATA_DRIVER` picks the driver:
+[`src/lib/data/repository.ts`](src/lib/data/repository.ts), backed by Postgres via [Drizzle](https://orm.drizzle.team)
+and `postgres.js` (`DATABASE_URL`; outside production it defaults to the compose database). Tables are in
+[`src/lib/data/drizzle/schema.ts`](src/lib/data/drizzle/schema.ts), migrations in `drizzle/`. Locations are PostGIS
+`geometry(Point, 4326)`; search uses a trigram-indexed `search_text` column; `saveChapters` and other multi-step writes
+run in one transaction.
 
-- `drizzle` (default): Postgres via [Drizzle](https://orm.drizzle.team) and `postgres.js` (`DATABASE_URL`; outside
-  production it defaults to the compose database). Tables are in
-  [`src/lib/data/drizzle/schema.ts`](src/lib/data/drizzle/schema.ts), migrations in `drizzle/`. Locations are PostGIS
-  `geometry(Point, 4326)`; search uses a trigram-indexed `search_text` column; `saveChapters` and other multi-step
-  writes run in one transaction.
-- `json`: one file (`DATA_FILE`, default `data/db.json`) with one array per table (`points`, `collections`,
-  `stories`, `chapters`, `chapterPoints`). Writes are queued and written atomically. No setup; for a quick look without
-  Docker.
+`data/seed.json` is a snapshot (one array per table: `points`, `collections`, `stories`, `chapters`, `chapterPoints`),
+validated by [`src/lib/data/snapshot.ts`](src/lib/data/snapshot.ts) and loaded with `pnpm db:seed`. (An earlier
+json-file driver used the same format; its `data/db.json` can be imported with `pnpm db:seed data/db.json`.)
 
-Both drivers pass the same contract tests, so they behave the same. To change the schema: edit `schema.ts`,
+To change the schema: edit `schema.ts`,
 `pnpm db:generate`, review the SQL in `drizzle/`, `pnpm db:migrate`. (drizzle-kit 0.31 drops the SRID from geometry
 columns; check new geometry columns say `geometry(point, 4326)`.)
 
@@ -119,8 +116,7 @@ See [`docs/plans/postgres-and-s3.md`](docs/plans/postgres-and-s3.md) for the dec
 ## Tests
 
 `pnpm test` runs [Vitest](https://vitest.dev). The `DataStore` contract suite
-([`src/lib/data/__tests__/contract.ts`](src/lib/data/__tests__/contract.ts)) runs against the json driver and against
-the drizzle driver on [PGlite](https://pglite.dev) (Postgres with PostGIS compiled to WASM, in-process, no Docker).
+([`src/lib/data/__tests__/contract.ts`](src/lib/data/__tests__/contract.ts)) runs against the drizzle store on [PGlite](https://pglite.dev) (Postgres with PostGIS compiled to WASM, in-process, no Docker).
 Set `TEST_DATABASE_URL` to also run it against a real Postgres (it wipes that database). A second test checks that
 `data/seed.json` loads into Postgres and reads back unchanged. Storage tests cover the upload rules and URL signing.
 

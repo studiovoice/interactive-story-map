@@ -1,29 +1,15 @@
 import "server-only"
 
 import type { DataStore } from "./repository"
-import { createJsonStore } from "./json/json-store"
 import { createDrizzleStore } from "./drizzle/drizzle-store"
 import { getDb } from "./drizzle/client"
 
 /**
- * Pick the persistence driver with DATA_DRIVER:
- *   - "drizzle" (default): Postgres (`src/lib/data/drizzle/`). Locally: `pnpm services:up`, then
- *     `pnpm db:migrate && pnpm db:seed`. In production DATABASE_URL must be set.
- *   - "json": one file on disk, no Docker needed (`src/lib/data/json/`). Handy for a quick look.
- * Both implement `DataStore` and pass the same contract tests (`src/lib/data/__tests__/`).
+ * The app's data store: Postgres via Drizzle (`src/lib/data/drizzle/`). Locally:
+ * `pnpm services:up`, then `pnpm db:migrate && pnpm db:seed`. In production DATABASE_URL must be set.
+ * Everything else talks to the `DataStore` interface only, and the contract tests
+ * (`src/lib/data/__tests__/`) pin down its behaviour.
  */
-function createStore(): DataStore {
-  const driver = process.env.DATA_DRIVER || "drizzle"
-  switch (driver) {
-    case "json":
-      return createJsonStore()
-    case "drizzle":
-      return createDrizzleStore(getDb())
-    default:
-      throw new Error(`Unknown DATA_DRIVER "${driver}"`)
-  }
-}
-
-export const store: DataStore = createStore()
+export const store: DataStore = createDrizzleStore(getDb())
 
 export { NotFoundError } from "./repository"

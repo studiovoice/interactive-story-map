@@ -1,9 +1,7 @@
 /**
  * The persistence contract. UI code and server actions only talk to `DataStore`;
- * nothing outside `src/lib/data/<driver>/` knows how data is stored.
- *
- * Today: `json` driver (a file on disk). Later: add `src/lib/data/drizzle/` that
- * implements the same interface against Postgres and switch `DATA_DRIVER=drizzle`.
+ * nothing outside `src/lib/data/drizzle/` knows how data is stored. The contract tests
+ * (`src/lib/data/__tests__/contract.ts`) describe how any implementation must behave.
  */
 import type {
   ChapterDraft,

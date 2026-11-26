@@ -1,6 +1,6 @@
 /**
- * The json driver's file format (`data/seed.json`, `data/db.json`), validated. Used to seed or
- * import into Postgres. Pure: no `server-only`, so scripts and tests can use it.
+ * The snapshot file format (`data/seed.json`, or a `db.json` from the old json driver), validated.
+ * Used to seed or import into Postgres. Pure: no `server-only`, so scripts and tests can use it.
  */
 import { z } from "zod"
 import { chapterPointSchema, chapterSchema, collectionSchema, pointSchema, storySchema } from "@/lib/domain/schema"

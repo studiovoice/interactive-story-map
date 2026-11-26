@@ -1,8 +1,8 @@
 /**
- * Load data into Postgres from a json-driver file.
+ * Load data into Postgres from a snapshot file (`data/seed.json` format).
  *
  *   pnpm db:seed                      data/seed.json → empty database
- *   pnpm db:seed data/db.json         import your local json data instead
+ *   pnpm db:seed data/db.json         import a file from the old json driver instead
  *   pnpm db:seed --reset [file]       empty every table first
  *
  * Uses DATABASE_URL (from the environment, .env.local or .env). Run `pnpm db:migrate` first.

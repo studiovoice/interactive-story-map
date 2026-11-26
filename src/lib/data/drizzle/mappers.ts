@@ -1,6 +1,6 @@
 /**
- * Postgres rows ↔ domain objects. The domain types (and so the UI) see exactly what the
- * json driver returns: ISO strings for instants, "YYYY-MM-DDTHH:mm[:ss]" for capturedAt.
+ * Postgres rows ↔ domain objects. The domain types (and so the UI) see the same shapes as
+ * `data/seed.json`: ISO strings for instants, "YYYY-MM-DDTHH:mm[:ss]" for capturedAt.
  */
 import type { Chapter, ChapterPoint, Collection, Point, Story } from "@/lib/domain/schema"
 import type { chapterPoints, chapters, collections, points, stories } from "./schema"

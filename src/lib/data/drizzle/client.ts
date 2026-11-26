@@ -18,7 +18,7 @@ export function getDb() {
   const url = process.env.DATABASE_URL || (process.env.NODE_ENV === "production" ? undefined : LOCAL_DATABASE_URL)
   if (!url)
     throw new Error(
-      "DATABASE_URL is not set. Postgres is the default data driver (DATA_DRIVER=drizzle); set DATABASE_URL, or DATA_DRIVER=json for the file driver. See .env.example.",
+      "DATABASE_URL is not set. The app stores its data in Postgres; set DATABASE_URL (see .env.example).",
     )
   const client = (globalForDb.storyMapSql ??= postgres(url, {
     max: Number(process.env.DATABASE_POOL_MAX ?? 10),

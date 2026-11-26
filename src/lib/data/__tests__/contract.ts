@@ -12,7 +12,7 @@ export type StoreHarness = {
   store: DataStore
   /** Remove every row. */
   reset(): Promise<void>
-  /** Load a json-driver snapshot (drizzle harnesses only). */
+  /** Load a snapshot (`data/seed.json` format). */
   seed?(snapshot: import("@/lib/data/snapshot").Snapshot): Promise<void>
   close?(): Promise<void>
 }

@@ -1,6 +1,6 @@
 /**
- * `DataStore` on Postgres via Drizzle. Behaves like the json driver (the contract tests in
- * `src/lib/data/__tests__` check both). Takes the db so tests can pass PGlite or a test database;
+ * `DataStore` on Postgres via Drizzle. The contract tests in `src/lib/data/__tests__` describe
+ * how it behaves. Takes the db so tests can pass PGlite or a test database;
  * the app gets its db from `./client.ts`.
  */
 import { asc, count, countDistinct, desc, eq, inArray, sql, type SQL } from "drizzle-orm"
@@ -423,7 +423,7 @@ export function createDrizzleStore(db: Db): DataStore {
   }
 }
 
-/** Rows of `data/seed.json` (or a `db.json`) → tables, in foreign-key order. Used by the seed script. */
+/** Rows of a snapshot (`data/seed.json`, or an old json-driver `db.json`) → tables, in foreign-key order. Used by the seed script. */
 export async function insertSnapshot(
   db: Db,
   data: {
