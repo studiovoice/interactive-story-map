@@ -156,9 +156,6 @@ export function createJsonStore(): DataStore {
           db.chapterPoints = db.chapterPoints.filter((cp) => cp.pointId !== id)
         })
       },
-      async usage() {
-        return usageMap(await readDb())
-      },
       async mapList() {
         const db = await readDb()
         const used = new Set(db.chapterPoints.map((cp) => cp.pointId))

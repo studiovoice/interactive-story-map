@@ -17,7 +17,6 @@ import type {
   CollectionSummary,
   Point,
   PointInput,
-  PointUsage,
   Story,
   StoryDetail,
   StoryInput,
@@ -31,8 +30,6 @@ export interface PointRepository {
   update(id: string, input: Partial<PointInput>): Promise<Point>
   /** Also removes the point from any chapters it is in. */
   delete(id: string): Promise<void>
-  /** Stories/chapters that use each point, keyed by point id. */
-  usage(): Promise<Record<string, PointUsage[]>>
   /**
    * Lightweight rows for drawing points on a map.
    * Stage 2 (see README): takes a map tile / bbox and returns only the points (or clusters) in it.

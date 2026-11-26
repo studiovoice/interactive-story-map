@@ -173,9 +173,6 @@ export function createDrizzleStore(db: Db): DataStore {
         // chapter_points rows go with it (ON DELETE CASCADE).
         await db.delete(points).where(eq(points.id, id))
       },
-      async usage() {
-        return usageMap(db)
-      },
       async mapList() {
         // Runs over every point, so both derived fields are computed set-wise: a per-row subquery
         // (unnesting `media`, or an `exists` per point) made this ~4x slower at 100k points.
