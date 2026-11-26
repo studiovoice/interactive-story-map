@@ -6,11 +6,12 @@ import { PageContainer, PageHeader } from "@/components/page-header"
 import { PageLoading } from "@/components/page-loading"
 import { PointsTable } from "@/components/points/points-table"
 import { Button } from "@/components/ui/button"
-import { getPointUsage, getPoints } from "@/lib/queries"
+import { DEFAULT_PAGE_SIZE } from "@/lib/data/repository"
+import { getPointPage } from "@/lib/queries"
 
 export const metadata: Metadata = { title: "Points" }
 
-export default function PointsPage() {
+export default function PointsPage({ searchParams }: PageProps<"/points">) {
   return (
     <PageContainer>
       <PageHeader
@@ -25,13 +26,16 @@ export default function PointsPage() {
         }
       />
       <Suspense fallback={<PageLoading />}>
-        <Points />
+        <Points searchParams={searchParams} />
       </Suspense>
     </PageContainer>
   )
 }
 
-async function Points() {
-  const [points, usage] = await Promise.all([getPoints(), getPointUsage()])
-  return <PointsTable points={points} usage={usage} />
+async function Points({ searchParams }: Pick<PageProps<"/points">, "searchParams">) {
+  const params = await searchParams
+  const q = typeof params.q === "string" ? params.q : ""
+  const page = Math.max(1, Math.floor(Number(params.page)) || 1)
+  const { rows, total } = await getPointPage(q, page)
+  return <PointsTable rows={rows} total={total} q={q} page={page} pageSize={DEFAULT_PAGE_SIZE} />
 }

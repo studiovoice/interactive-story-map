@@ -1,8 +1,18 @@
 "use client"
 
-import { MapPinIcon, MoreHorizontalIcon, PencilIcon, PlusIcon, SearchIcon, Trash2Icon } from "lucide-react"
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  MapPinIcon,
+  MoreHorizontalIcon,
+  PencilIcon,
+  PlusIcon,
+  SearchIcon,
+  Trash2Icon,
+} from "lucide-react"
 import Link from "next/link"
-import { useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
+import { useEffect, useState, useTransition } from "react"
 import { ConfirmDelete } from "@/components/confirm-delete"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -17,17 +27,67 @@ import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTi
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { deletePoint } from "@/lib/actions"
-import type { Point, PointUsage } from "@/lib/domain/schema"
+import type { Point, PointListRow } from "@/lib/domain/schema"
 import { formatCaptured } from "@/lib/time"
-import { matchesQuery } from "@/lib/points/match"
 import { mediaSummary } from "@/lib/points/media"
+import { cn } from "@/lib/utils"
 import { PointMedia } from "./point-media"
 
-export function PointsTable({ points, usage }: { points: Point[]; usage: Record<string, PointUsage[]> }) {
-  const [query, setQuery] = useState("")
-  const rows = useMemo(() => points.filter((p) => matchesQuery(p, query)), [points, query])
+const fmt = new Intl.NumberFormat("en-US")
 
-  if (!points.length) {
+/** Wait this long after the last keystroke before filtering on the server. */
+const FILTER_DELAY_MS = 250
+
+function pageHref(q: string, page: number) {
+  const params = new URLSearchParams()
+  if (q.trim()) params.set("q", q.trim())
+  if (page > 1) params.set("page", String(page))
+  const s = params.toString()
+  return s ? `/points?${s}` : "/points"
+}
+
+/**
+ * One page of points (paged and filtered on the server, from `?q=` and `?page=`). Typing in the
+ * filter updates the URL after a short pause; the current rows stay, dimmed, until the new page arrives.
+ */
+export function PointsTable({
+  rows,
+  total,
+  q,
+  page,
+  pageSize,
+}: {
+  rows: PointListRow[]
+  total: number
+  q: string
+  page: number
+  pageSize: number
+}) {
+  const router = useRouter()
+  const [pending, startTransition] = useTransition()
+  const [query, setQuery] = useState(q)
+  // The query last sent to the URL, so a slower response doesn't overwrite what's being typed.
+  const [sent, setSent] = useState(q)
+  const [prevQ, setPrevQ] = useState(q)
+  if (q !== prevQ) {
+    // The URL changed (a response arrived, or back/forward): show its query unless it's one we sent.
+    setPrevQ(q)
+    if (q !== sent) {
+      setQuery(q)
+      setSent(q)
+    }
+  }
+
+  useEffect(() => {
+    if (query.trim() === sent.trim()) return
+    const t = setTimeout(() => {
+      setSent(query)
+      startTransition(() => router.replace(pageHref(query, 1), { scroll: false }))
+    }, FILTER_DELAY_MS)
+    return () => clearTimeout(t)
+  }, [query, sent, router])
+
+  if (!total && !q.trim() && !query.trim()) {
     return (
       <Empty className="border">
         <EmptyHeader>
@@ -48,6 +108,9 @@ export function PointsTable({ points, usage }: { points: Point[]; usage: Record<
     )
   }
 
+  const pages = Math.max(1, Math.ceil(total / pageSize))
+  const from = (page - 1) * pageSize
+
   return (
     <div className="flex flex-col gap-3">
       <div className="relative max-w-sm">
@@ -60,7 +123,10 @@ export function PointsTable({ points, usage }: { points: Point[]; usage: Record<
           aria-label="Filter points"
         />
       </div>
-      <div className="overflow-hidden rounded-xl border">
+      <div
+        className={cn("overflow-hidden rounded-xl border transition-opacity", pending && "opacity-60")}
+        aria-busy={pending}
+      >
         <Table>
           <TableHeader>
             <TableRow>
@@ -74,8 +140,7 @@ export function PointsTable({ points, usage }: { points: Point[]; usage: Record<
           </TableHeader>
           <TableBody>
             {rows.map((p) => {
-              const used = usage[p.id] ?? []
-              const storyCount = new Set(used.map((u) => u.storyId)).size
+              const storyCount = p.storyCount
               return (
                 <TableRow key={p.id}>
                   <TableCell>
@@ -122,14 +187,62 @@ export function PointsTable({ points, usage }: { points: Point[]; usage: Record<
             {!rows.length && (
               <TableRow>
                 <TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
-                  No points match “{query}”.
+                  {total ? (
+                    <>
+                      This page is past the end.{" "}
+                      <Link href={pageHref(q, pages)} className="underline">
+                        Go to the last page
+                      </Link>
+                    </>
+                  ) : (
+                    <>No points match “{q}”.</>
+                  )}
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
       </div>
+      {total > 0 && (
+        <nav aria-label="Pages" className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
+          <span>
+            {rows.length
+              ? `${fmt.format(from + 1)}–${fmt.format(from + rows.length)} of ${fmt.format(total)}`
+              : `${fmt.format(total)} ${total === 1 ? "point" : "points"}`}
+          </span>
+          {pages > 1 && (
+            <div className="flex items-center gap-2">
+              <span className="hidden sm:inline">
+                Page {fmt.format(Math.min(page, pages))} of {fmt.format(pages)}
+              </span>
+              <PageLink href={page > 1 ? pageHref(q, Math.min(page, pages) - 1) : null} label="Previous page">
+                <ChevronLeftIcon />
+              </PageLink>
+              <PageLink href={page < pages ? pageHref(q, page + 1) : null} label="Next page">
+                <ChevronRightIcon />
+              </PageLink>
+            </div>
+          )}
+        </nav>
+      )}
     </div>
+  )
+}
+
+function PageLink({ href, label, children }: { href: string | null; label: string; children: React.ReactNode }) {
+  if (!href) {
+    return (
+      <Button variant="outline" size="icon-sm" disabled aria-label={label}>
+        {children}
+      </Button>
+    )
+  }
+  return (
+    <Button variant="outline" size="icon-sm" asChild>
+      <Link href={href} aria-label={label}>
+        {children}
+      </Link>
+    </Button>
   )
 }
 

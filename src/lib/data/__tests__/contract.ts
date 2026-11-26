@@ -164,7 +164,7 @@ export function describeStoreContract(name: string, setup: () => Promise<StoreHa
 
     /* ───────────── map list, usage, detail ───────────── */
 
-    describe("map list and usage", () => {
+    describe("map list and detail", () => {
       it("returns slim rows with inStory", async () => {
         const { points } = await storyWithPoints(1)
         const loose = await store.points.create(
@@ -210,9 +210,9 @@ export function describeStoreContract(name: string, setup: () => Promise<StoreHa
             points: [{ pointId: points[0].id }, { pointId: second.id }],
           },
         ])
-        const usage = await store.points.usage()
-        expect(usage[points[1].id]).toBeUndefined()
-        expect(usage[second.id]).toEqual([
+        const detail = await store.points.detail(second.id)
+        expect(detail!.point.id).toBe(second.id)
+        expect(detail!.usage).toEqual([
           {
             storyId: story.id,
             storyTitle: story.title,
@@ -224,11 +224,7 @@ export function describeStoreContract(name: string, setup: () => Promise<StoreHa
             chapterTitle: "Two",
           },
         ])
-        expect(usage[points[0].id].map((u) => u.chapterIndex).sort()).toEqual([0, 1])
-
-        const detail = await store.points.detail(second.id)
-        expect(detail!.point.id).toBe(second.id)
-        expect(detail!.usage).toEqual(usage[second.id])
+        expect((await store.points.detail(points[0].id))!.usage.map((u) => u.chapterIndex).sort()).toEqual([0, 1])
         expect((await store.points.detail(points[1].id))!.usage).toEqual([])
       })
     })
@@ -438,7 +434,7 @@ export function describeStoreContract(name: string, setup: () => Promise<StoreHa
         await store.stories.delete(story.id)
         expect(await store.stories.get(story.id)).toBeNull()
         expect(await store.stories.getDetail(story.id)).toBeNull()
-        expect(await store.points.usage()).toEqual({})
+        expect((await store.points.detail(points[0].id))!.usage).toEqual([])
         expect(await store.points.get(points[0].id)).not.toBeNull()
       })
     })

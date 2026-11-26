@@ -26,9 +26,10 @@ export const getMapPoints = cache(async () => {
   return store.points.mapList()
 })
 
-export const getPointUsage = cache(async () => {
+/** One page of the points table (see `PointRepository.page`). */
+export const getPointPage = cache(async (q: string, page: number) => {
   await connection()
-  return store.points.usage()
+  return store.points.page({ q, page })
 })
 
 export const getCollections = cache(async () => {
