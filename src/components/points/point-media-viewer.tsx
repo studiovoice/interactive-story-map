@@ -6,6 +6,7 @@ import type { MediaAsset, Point } from "@/lib/domain/schema"
 import { isVisual } from "@/lib/points/media"
 import { mediaUrl } from "@/lib/storage/client"
 import { cn } from "@/lib/utils"
+import { LazyVideo } from "./lazy-video"
 import { formatDurationSec, PointMedia } from "./point-media"
 
 type Shown = { asset: MediaAsset; url: string }
@@ -120,7 +121,7 @@ export function PointMediaViewer({ point, className }: { point: Point; className
               {v.asset.kind === "video" ? (
                 <>
                   {/* #t: show a frame from just after the start instead of a blank first frame. */}
-                  <video src={`${v.url}#t=0.1`} preload="metadata" muted className="size-full object-cover" />
+                  <LazyVideo src={v.url} className="size-full object-cover" />
                   <span className="absolute inset-0 m-auto grid size-4 place-items-center rounded-full bg-black/60 text-white">
                     <PlayIcon className="size-2 fill-current" />
                   </span>

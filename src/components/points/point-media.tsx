@@ -4,6 +4,7 @@ import { coverMedia, isVisual } from "@/lib/points/media"
 import { mediaUrl } from "@/lib/storage/client"
 import { parseLocal, timeOfDay } from "@/lib/time"
 import { cn } from "@/lib/utils"
+import { LazyVideo } from "./lazy-video"
 
 const SKY = {
   Morning: ["#bcd7ea", "#f3ead7"],
@@ -106,10 +107,9 @@ export function PointMedia({
   let content: React.ReactNode
   if (media?.kind === "image" && url) {
     // eslint-disable-next-line @next/next/no-img-element -- arbitrary external URLs
-    content = <img src={url} alt={point.title} className="size-full object-cover" />
+    content = <img src={url} alt={point.title} loading="lazy" decoding="async" className="size-full object-cover" />
   } else if (media?.kind === "video" && url) {
-    // #t: show a frame from just after the start instead of a blank first frame.
-    content = <video src={`${url}#t=0.1`} preload="metadata" muted className="size-full object-cover" />
+    content = <LazyVideo src={url} className="size-full object-cover" />
   } else if (media?.kind === "audio") {
     content = (
       <span className="grid size-full place-items-center bg-muted text-muted-foreground">
