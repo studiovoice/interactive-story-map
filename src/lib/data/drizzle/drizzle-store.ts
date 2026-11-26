@@ -177,17 +177,22 @@ export function createDrizzleStore(db: Db): DataStore {
         return usageMap(db)
       },
       async mapList() {
+        // Runs over every point, so both derived fields are computed set-wise: a per-row subquery
+        // (unnesting `media`, or an `exists` per point) made this ~4x slower at 100k points.
+        const used = db.selectDistinct({ pointId: chapterPoints.pointId }).from(chapterPoints).as("used")
         const rows = await db
           .select({
             id: points.id,
             title: points.title,
-            mediaKinds: sql<MediaKind[]>`array(select e->>'kind' from jsonb_array_elements(${points.media}) with ordinality as t(e, i) order by i)`,
+            // JSON path keeps array order.
+            mediaKinds: sql<MediaKind[]>`jsonb_path_query_array(${points.media}, '$[*].kind')`,
             location: points.location,
             locationPrecision: points.locationPrecision,
             locationRadiusM: points.locationRadiusM,
-            inStory: sql<boolean>`exists (select 1 from ${chapterPoints} cp where cp.point_id = ${outer("points", "id")})`,
+            inStory: sql<boolean>`${used.pointId} is not null`,
           })
           .from(points)
+          .leftJoin(used, eq(used.pointId, points.id))
           .orderBy(asc(points.createdAt), asc(points.id))
         return rows.map((r): MapPoint => ({ ...r, location: [r.location[0], r.location[1]], inStory: !!r.inStory }))
       },
