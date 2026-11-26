@@ -4,6 +4,7 @@ import { FolderOpenIcon, MapIcon, MapPinIcon } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import { UserMenu } from "@/components/auth/user-menu"
 import { SettingsMenu } from "@/components/settings-menu"
 import { cn } from "@/lib/utils"
 
@@ -51,8 +52,9 @@ function Header({ pathname }: { pathname: string }) {
           </Button>
         ))}
       </nav>
-      <div className="ml-auto">
+      <div className="ml-auto flex items-center gap-1">
         <SettingsMenu />
+        <UserMenu pathname={pathname} />
       </div>
     </header>
   )

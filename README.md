@@ -34,6 +34,7 @@ cp .env.example .env.local   # Postgres + uploads, matching docker-compose.yml
 pnpm services:up             # start Postgres + RustFS, create the bucket
 pnpm db:migrate              # create the tables
 pnpm db:seed                 # load data/seed.json (or: pnpm db:seed data/db.json to import old json-driver data)
+pnpm admin:create you@example.org   # your staff account (see "Staff sign-in")
 pnpm dev                     # http://localhost:3000
 ```
 
@@ -46,7 +47,28 @@ or a hosted one such as Neon). Without a bucket, set `NEXT_PUBLIC_STORAGE_DRIVER
 by URL.
 
 Other scripts: `pnpm build`, `pnpm lint`, `pnpm typecheck`, `pnpm format`, `pnpm test` (see "Tests"),
-`pnpm db:generate` (new migration after changing the schema), `pnpm db:studio`.
+`pnpm db:generate` (new migration after changing the schema), `pnpm db:studio`, `pnpm auth:schema` (regenerate Better
+Auth's tables after changing its plugins).
+
+## Staff sign-in
+
+Only staff (admins and curators) have accounts; the public never signs in. Sign-in uses
+[Better Auth](https://www.better-auth.com) with one-time email codes: no passwords and no sign-up. See
+[`docs/plans/auth-and-roles.md`](docs/plans/auth-and-roles.md) for roles and the plan.
+
+- `pnpm admin:create <email> [--name <name>] [--role admin|curator]` creates an account, or changes an existing one's
+  role (and un-bans it). Defaults to `admin`. That's how the first admin gets in.
+- Sign in at `/sign-in` (or "Sign in" in the header). Without `RESEND_API_KEY` the code is printed in the `pnpm dev`
+  terminal instead of emailed.
+- Codes have 6 digits, expire after 10 minutes, work once and allow 3 tries. Sessions last 7 days and renew while in
+  use.
+- Production needs `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `RESEND_API_KEY` and `EMAIL_FROM` (see `.env.example`).
+
+Code: [`src/lib/auth/`](src/lib/auth) (`config.ts` the setup, `permissions.ts` roles, `server.ts` `auth` and
+`getViewer()`, `client.ts` for the browser), routes at `/api/auth/*`. Its tables are in their own Postgres schema,
+`auth` (`auth.users`, `auth.sessions`, …; our content stays in `public`), defined in
+[`src/lib/data/drizzle/auth-schema.ts`](src/lib/data/drizzle/auth-schema.ts). Roles aren't enforced on pages and
+actions yet (Phase 2 of the plan).
 
 ## Screens
 
@@ -58,6 +80,7 @@ Other scripts: `pnpm build`, `pnpm lint`, `pnpm typecheck`, `pnpm format`, `pnpm
 | `/collections`                     | Collections grid; create.                                                                                                                                                       |
 | `/collections/[id]`                | Collection detail: edit/delete it, list/create/delete its stories.                                                                                                              |
 | `/stories/[id]`                    | Playback: the prototype's story view, driven by real data. `?at=<pointId>` starts at a point, `&autoplay=1` plays.                                                              |
+| `/sign-in`                         | Staff sign-in with an emailed code.                                                                                                                                             |
 | `/stories/[id]/edit`               | Story editor: chapters (add, reorder, delete), points per chapter (from the map or a searchable list), path/timeline, route drawing, camera, notes. Save with the button or ⌘S. |
 
 ## Project layout
@@ -74,6 +97,7 @@ src/
     ui/                     shadcn/ui components (generated)
   lib/
     domain/schema.ts        zod schemas + types for everything (single source of truth)
+    auth/                   Better Auth setup, roles and permissions, sign-in emails
     data/                   persistence: DataStore interface, drizzle (Postgres) implementation, contract tests
     storage/                object storage: S3 provider, upload rules, client-safe media URLs
     story/timeline.ts       pure: story → playback timeline (chapter spans, compressed gaps, positions, clock, route front)
