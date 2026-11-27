@@ -32,6 +32,7 @@ import { can, type Role } from "@/lib/auth/permissions"
 import type { Point, PointListRow, PointSource } from "@/lib/domain/schema"
 import { formatCaptured } from "@/lib/time"
 import { mediaSummary } from "@/lib/points/media"
+import { addedByLabel } from "@/lib/points/public"
 import { cn } from "@/lib/utils"
 import { PointMedia } from "./point-media"
 
@@ -233,11 +234,7 @@ export function PointsTable({
                     )}
                   </TableCell>
                   <TableCell className="hidden text-xs whitespace-nowrap text-muted-foreground xl:table-cell">
-                    {p.source === "public"
-                      ? "Public"
-                      : p.createdBy
-                        ? (staffName.get(p.createdBy) ?? "Staff")
-                        : "Staff (before sign-in)"}
+                    {addedByLabel(p, (id) => staffName.get(id))}
                   </TableCell>
                   <TableCell>
                     <RowMenu point={p} usedIn={storyCount} role={role} />

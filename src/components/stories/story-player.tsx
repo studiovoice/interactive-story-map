@@ -441,7 +441,6 @@ function Player({
 }
 
 function PlayerHeader({ story, timeline }: { story: StoryDetail; timeline: Timeline }) {
-  const contributors = new Set(timeline.items.map((i) => i.point.contributor || `anon-${i.point.id}`)).size
   const when =
     timeline.startsAt === null
       ? null
@@ -464,7 +463,7 @@ function PlayerHeader({ story, timeline }: { story: StoryDetail; timeline: Timel
         </h1>
         <p className="mt-px text-[12.5px] text-muted-foreground">
           {when && <>{when} · </>}
-          {timeline.items.length} uploads from {contributors} {contributors === 1 ? "contributor" : "contributors"} ·{" "}
+          {timeline.items.length} {timeline.items.length === 1 ? "upload" : "uploads"} ·{" "}
           {staff ? (
             <Link href={`/collections/${story.collection.id}`} className="hover:text-foreground hover:underline">
               {story.collection.title}
@@ -539,7 +538,6 @@ function StoryCard({
                     : formatTime(it.time),
                 it.point.placeName,
                 isFuzzy(it.point) ? locationPrecisionLabel(it.point).toLowerCase() : null,
-                it.point.contributor || "Anonymous contributor",
               ]
                 .filter(Boolean)
                 .join(" · ")}

@@ -2,7 +2,7 @@
  * Postgres rows ↔ domain objects. The domain types (and so the UI) see the same shapes as
  * `data/seed.json`: ISO strings for instants, "YYYY-MM-DDTHH:mm[:ss]" for capturedAt.
  */
-import type { Chapter, ChapterPoint, Collection, Point, Story } from "@/lib/domain/schema"
+import type { Chapter, ChapterPoint, StoredPoint, Collection, Point, Story } from "@/lib/domain/schema"
 import type { chapterPoints, chapters, collections, points, stories } from "./schema"
 
 type PointRow = typeof points.$inferSelect
@@ -46,7 +46,7 @@ export function searchText(p: Pick<Point, "title" | "description" | "placeName" 
 /** Escape LIKE wildcards so the query is matched literally. */
 export const likePattern = (q: string) => `%${q.trim().toLowerCase().replace(/[\\%_]/g, (c) => `\\${c}`)}%`
 
-export function toPoint(r: PointRow): Point {
+export function toPoint(r: PointRow): StoredPoint {
   return {
     id: r.id,
     title: r.title,
@@ -67,7 +67,7 @@ export function toPoint(r: PointRow): Point {
   }
 }
 
-export function fromPoint(p: Point): PointRow {
+export function fromPoint(p: StoredPoint): PointRow {
   return {
     ...p,
     capturedAt: fromLocalDateTime(p.capturedAt),

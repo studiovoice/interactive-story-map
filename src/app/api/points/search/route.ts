@@ -2,10 +2,12 @@ import type { NextRequest } from "next/server"
 import { store } from "@/lib/data"
 import type { PointSearchResult } from "@/lib/domain/schema"
 import { lngLatFromParams } from "@/lib/geo"
+import { toPublicSearchResult } from "@/lib/points/public"
 
 /**
  * GET /api/points/search?q=bridge&lat=40.7&lng=-74&limit=5
- * → PointSearchResult: every matching id (to filter the map) and the closest few in full.
+ * → PointSearchResult: every matching id (to filter the map) and the closest few in full, without
+ * staff-only fields (the search box doesn't need them, for anyone).
  */
 export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams
@@ -14,5 +16,5 @@ export async function GET(req: NextRequest) {
   const limit = Math.min(Math.max(Number(sp.get("limit")) || 5, 1), 50)
   // TODO(auth): once there are private points, filter to what the viewer may see.
   const result = await store.points.search({ q, near: lngLatFromParams(sp), limit })
-  return Response.json(result)
+  return Response.json(toPublicSearchResult(result))
 }

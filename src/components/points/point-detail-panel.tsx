@@ -97,7 +97,7 @@ export function PointDetailPanel({
           </div>
         )}
         {point ? (
-          <PointBody point={point} />
+          <PointBody point={point} addedBy={detail?.addedBy} />
         ) : (
           <>
             <Skeleton className="aspect-video w-full shrink-0 rounded-md" />
@@ -157,7 +157,7 @@ export function PointDetailPanel({
   )
 }
 
-function PointBody({ point }: { point: Point }) {
+function PointBody({ point, addedBy }: { point: Point; addedBy?: string }) {
   return (
     <>
       <PointMediaViewer point={point} className="shrink-0" />
@@ -179,8 +179,13 @@ function PointBody({ point }: { point: Point }) {
             </span>
           )}
         </dd>
-        <dt className="text-muted-foreground">Uploaded by</dt>
-        <dd>{point.contributor || "Anonymous contributor"}</dd>
+        {/* Only in responses to staff. */}
+        {addedBy && (
+          <>
+            <dt className="text-muted-foreground">Added by</dt>
+            <dd>{addedBy}</dd>
+          </>
+        )}
       </dl>
       {point.tags.length > 0 && (
         <div className="flex flex-wrap gap-1">

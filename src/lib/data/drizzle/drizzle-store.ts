@@ -15,7 +15,7 @@ import {
   type LngLat,
   type MediaKind,
   type MapPoint,
-  type Point,
+  type StoredPoint,
   type PointUsage,
   type StoryDetail,
   type StorySummary,
@@ -143,7 +143,7 @@ export function createDrizzleStore(db: Db): DataStore {
       async create(input, origin = { source: "staff", createdBy: null }) {
         const parsed = pointInputSchema.parse(input)
         const ts = now().toISOString()
-        const point: Point = {
+        const point: StoredPoint = {
           ...parsed,
           ...normalizePointLocation(parsed),
           source: origin.source,
@@ -161,7 +161,7 @@ export function createDrizzleStore(db: Db): DataStore {
           if (!prevRow) throw new NotFoundError("Point", id)
           const prev = toPoint(prevRow)
           const merged = pointInputSchema.parse({ ...prev, ...input })
-          const next: Point = { ...prev, ...merged, ...normalizePointLocation(merged, prev), updatedAt: now().toISOString() }
+          const next: StoredPoint = { ...prev, ...merged, ...normalizePointLocation(merged, prev), updatedAt: now().toISOString() }
           const row = fromPoint(next)
           const [updated] = await tx
             .update(points)
@@ -433,7 +433,7 @@ export function createDrizzleStore(db: Db): DataStore {
 export async function insertSnapshot(
   db: Db,
   data: {
-    points: Point[]
+    points: StoredPoint[]
     collections: Parameters<typeof fromCollection>[0][]
     stories: Parameters<typeof fromStory>[0][]
     chapters: (typeof chapters.$inferInsert)[]

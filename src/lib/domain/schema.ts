@@ -118,7 +118,19 @@ export const pointSchema = pointInputSchema.extend({
   createdAt: z.string(),
   updatedAt: z.string(),
 })
-export type Point = z.infer<typeof pointSchema>
+/** A point as stored, with every field. What staff reads return. */
+export type StoredPoint = z.infer<typeof pointSchema>
+
+/**
+ * Fields only staff see. Public responses (the map's point panel, search, story playback) leave
+ * them out: who added a point and where it came from are internal, and `contributor` is free
+ * text that's being retired (uploads are anonymous). See `toPublicPoint`.
+ */
+export const staffOnlyPointFields = ["source", "createdBy", "contributor"] as const
+type StaffOnlyPointField = (typeof staffOnlyPointFields)[number]
+
+/** A point as the UI gets it: complete for staff, without the staff-only fields for the public. */
+export type Point = Omit<StoredPoint, StaffOnlyPointField> & Partial<Pick<StoredPoint, StaffOnlyPointField>>
 
 /* ───────────────────────── Collections ───────────────────────── */
 
@@ -263,7 +275,12 @@ export type PointListRow = Point & { storyCount: number }
 export type PointPage = { rows: PointListRow[]; total: number }
 
 /** Everything the point details panel shows. */
-export type PointDetail = { point: Point; usage: PointUsage[] }
+export type PointDetail = {
+  point: Point
+  usage: PointUsage[]
+  /** Who added it ("Public", a staff member's name, …). Only in responses to staff. */
+  addedBy?: string
+}
 
 export type PointSearchResult = {
   /** Every matching point id (capped), for filtering the map. */

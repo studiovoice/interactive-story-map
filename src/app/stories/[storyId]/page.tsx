@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 import { Suspense } from "react"
 import { PageLoading } from "@/components/page-loading"
 import { StoryPlayer } from "@/components/stories/story-player"
+import { toPublicStory } from "@/lib/points/public"
 import { getStoryDetail } from "@/lib/queries"
 
 export async function generateMetadata({ params }: PageProps<"/stories/[storyId]">): Promise<Metadata> {
@@ -24,5 +25,13 @@ async function Story({ params, searchParams }: PageProps<"/stories/[storyId]">) 
   const story = await getStoryDetail(storyId)
   if (!story) notFound()
   const at = typeof sp.at === "string" ? sp.at : undefined
-  return <StoryPlayer key={story.updatedAt} story={story} startAtPointId={at} autoplay={sp.autoplay === "1"} />
+  // The player doesn't need staff-only point fields, for anyone; keep them out of the page.
+  return (
+    <StoryPlayer
+      key={story.updatedAt}
+      story={toPublicStory(story)}
+      startAtPointId={at}
+      autoplay={sp.autoplay === "1"}
+    />
+  )
 }
