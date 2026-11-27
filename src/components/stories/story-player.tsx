@@ -32,6 +32,7 @@ import { DAY, MINUTE, formatDate, formatTime, timeOfDay } from "@/lib/time"
 import { isFuzzy, locationPrecisionLabel } from "@/lib/location"
 import { useSettings } from "@/lib/settings"
 import { cn } from "@/lib/utils"
+import { useCan, useViewerRole } from "@/lib/auth/client"
 import { TimelineTrack } from "./timeline-track"
 
 const SPEEDS = [1, 2, 4]
@@ -47,6 +48,7 @@ export function StoryPlayer({
   autoplay?: boolean
 }) {
   const timeline = useMemo(() => buildTimeline(story), [story])
+  const canEdit = useCan({ story: ["edit"] })
   if (timeline.isEmpty) {
     return (
       <div className="flex h-[calc(100dvh-3.5rem)] flex-col">
@@ -54,15 +56,19 @@ export function StoryPlayer({
         <Empty className="m-4 border">
           <EmptyHeader>
             <EmptyTitle>This story has no points yet</EmptyTitle>
-            <EmptyDescription>Add points to its chapters in the editor, then come back to play it.</EmptyDescription>
+            <EmptyDescription>
+              {canEdit ? "Add points to its chapters in the editor, then come back to play it." : "Check back later."}
+            </EmptyDescription>
           </EmptyHeader>
-          <EmptyContent>
-            <Button asChild>
-              <Link href={`/stories/${story.id}/edit`}>
-                <PencilIcon /> Edit story
-              </Link>
-            </Button>
-          </EmptyContent>
+          {canEdit && (
+            <EmptyContent>
+              <Button asChild>
+                <Link href={`/stories/${story.id}/edit`}>
+                  <PencilIcon /> Edit story
+                </Link>
+              </Button>
+            </EmptyContent>
+          )}
         </Empty>
       </div>
     )
@@ -442,6 +448,9 @@ function PlayerHeader({ story, timeline }: { story: StoryDetail; timeline: Timel
       : timeline.multiDay && timeline.endsAt !== null
         ? `${formatDate(timeline.startsAt)} – ${formatDate(timeline.endsAt)}`
         : formatDate(timeline.startsAt)
+  const canEdit = useCan({ story: ["edit"] })
+  // Collection pages are staff only for now.
+  const staff = useViewerRole() !== null
   return (
     <div className="flex shrink-0 flex-wrap items-center gap-3 px-3 py-3 sm:px-4">
       <div className="min-w-48 flex-1">
@@ -456,16 +465,22 @@ function PlayerHeader({ story, timeline }: { story: StoryDetail; timeline: Timel
         <p className="mt-px text-[12.5px] text-muted-foreground">
           {when && <>{when} · </>}
           {timeline.items.length} uploads from {contributors} {contributors === 1 ? "contributor" : "contributors"} ·{" "}
-          <Link href={`/collections/${story.collection.id}`} className="hover:text-foreground hover:underline">
-            {story.collection.title}
-          </Link>
+          {staff ? (
+            <Link href={`/collections/${story.collection.id}`} className="hover:text-foreground hover:underline">
+              {story.collection.title}
+            </Link>
+          ) : (
+            story.collection.title
+          )}
         </p>
       </div>
-      <Button asChild variant="outline" size="sm">
-        <Link href={`/stories/${story.id}/edit`}>
-          <PencilIcon /> Edit story
-        </Link>
-      </Button>
+      {canEdit && (
+        <Button asChild variant="outline" size="sm">
+          <Link href={`/stories/${story.id}/edit`}>
+            <PencilIcon /> Edit story
+          </Link>
+        </Button>
+      )}
     </div>
   )
 }

@@ -21,6 +21,7 @@ import type { PlaceResult } from "@/lib/geocoding/types"
 import { getSettings, useSettings } from "@/lib/settings"
 import { formatCaptured } from "@/lib/time"
 import { cn } from "@/lib/utils"
+import { useCan } from "@/lib/auth/client"
 import { PointDetailPanel } from "./point-detail-panel"
 import { PointMedia } from "./point-media"
 import { usePointDetail } from "./use-point-detail"
@@ -35,6 +36,8 @@ export function ExploreMap({ points }: { points: MapPoint[] }) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [nearbyIds, setNearbyIds] = useState<string[]>([])
   const [dropMode, setDropMode] = useState(false)
+  // Adding points is for staff (the public can submit points later, through their own form).
+  const canAdd = useCan({ point: ["create"] })
   const settings = useSettings()
   const { showApproxAreas } = settings
   const [place, setPlace] = useState<PlaceResult | null>(null)
@@ -106,7 +109,7 @@ export function ExploreMap({ points }: { points: MapPoint[] }) {
   }
 
   function onMapClick(e: MapMouseEvent) {
-    if (dropMode) {
+    if (dropMode && canAdd) {
       setDropMode(false)
       router.push(`/points/new?lng=${e.lngLat.lng.toFixed(6)}&lat=${e.lngLat.lat.toFixed(6)}`)
       return
@@ -207,15 +210,17 @@ export function ExploreMap({ points }: { points: MapPoint[] }) {
 
       {/* Bottom-left: legend + drop-a-point */}
       <div className="absolute bottom-3 left-3 z-10 flex flex-col items-start gap-2">
-        <Button
-          size="sm"
-          variant={dropMode ? "default" : "outline"}
-          className={cn(!dropMode && "bg-popover/95 shadow-sm backdrop-blur")}
-          onClick={() => setDropMode((v) => !v)}
-        >
-          <MapPinPlusIcon />
-          {dropMode ? "Click the map to place it (Esc to cancel)" : "Add a point here"}
-        </Button>
+        {canAdd && (
+          <Button
+            size="sm"
+            variant={dropMode ? "default" : "outline"}
+            className={cn(!dropMode && "bg-popover/95 shadow-sm backdrop-blur")}
+            onClick={() => setDropMode((v) => !v)}
+          >
+            <MapPinPlusIcon />
+            {dropMode ? "Click the map to place it (Esc to cancel)" : "Add a point here"}
+          </Button>
+        )}
         <div className="flex items-center gap-3 rounded-lg border bg-popover/95 px-2.5 py-1 text-[11px] text-muted-foreground shadow-sm backdrop-blur">
           <span className="flex items-center gap-1.5">
             <i className="inline-block size-2.5 rounded-full bg-primary" /> In a story

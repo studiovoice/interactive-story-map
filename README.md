@@ -67,15 +67,20 @@ Only staff (admins and curators) have accounts; the public never signs in. Sign-
 Code: [`src/lib/auth/`](src/lib/auth) (`config.ts` the setup, `permissions.ts` roles, `server.ts` `auth` and
 `getViewer()`, `client.ts` for the browser), routes at `/api/auth/*`. Its tables are in their own Postgres schema,
 `auth` (`auth.users`, `auth.sessions`, …; our content stays in `public`), defined in
-[`src/lib/data/drizzle/auth-schema.ts`](src/lib/data/drizzle/auth-schema.ts). Roles aren't enforced on pages and
-actions yet (Phase 2 of the plan).
+[`src/lib/data/drizzle/auth-schema.ts`](src/lib/data/drizzle/auth-schema.ts).
+
+**Roles.** `admin` does everything. `curator` manages collections and stories (including publishing and deleting),
+adds points, and edits a point's time and tags only. Every server action checks permissions
+([`src/lib/auth/permissions.ts`](src/lib/auth/permissions.ts) is the list), staff pages check the viewer, and
+[`src/proxy.ts`](src/proxy.ts) sends signed-out visitors from staff pages to `/sign-in`. The public sees the map and
+story playback. Each point records whether staff or the public added it, and which staff member.
 
 ## Screens
 
 | Route                              | What it does                                                                                                                                                                    |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `/`                                | Map of every point (clustered when zoomed out). Search, click for details, "Play from here" into any story that uses the point, drop a new point on the map.                    |
-| `/points`                          | Table of points with search, edit, delete.                                                                                                                                      |
+| `/points`                          | Table of points with search, an "Added by" filter, edit and delete (staff).                                                                                                     |
 | `/points/new`, `/points/[id]/edit` | Point form with a map location picker (`?lng=&lat=` pre-fills the pin).                                                                                                         |
 | `/collections`                     | Collections grid; create.                                                                                                                                                       |
 | `/collections/[id]`                | Collection detail: edit/delete it, list/create/delete its stories.                                                                                                              |

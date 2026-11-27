@@ -10,6 +10,7 @@ import { isFuzzy, locationPrecisionLabel } from "@/lib/location"
 import { mediaSummary } from "@/lib/points/media"
 import { formatCaptured } from "@/lib/time"
 import { cn } from "@/lib/utils"
+import { useCan } from "@/lib/auth/client"
 import { AttachmentList } from "./point-media"
 import { PointMediaViewer } from "./point-media-viewer"
 
@@ -46,6 +47,9 @@ export function PointDetailPanel({
 }) {
   const point = detail?.point
   const usage = detail?.usage ?? []
+  const canEditAll = useCan({ point: ["edit"] })
+  const canEditMetadata = useCan({ point: ["edit-metadata"] })
+  const canEdit = canEditAll || canEditMetadata
   return (
     <aside
       aria-label="Point details"
@@ -57,11 +61,13 @@ export function PointDetailPanel({
       <div className="flex shrink-0 items-center gap-1 border-b py-1.5 pr-1.5 pl-3">
         <Badge variant="secondary">{mediaSummary(summary.mediaKinds)}</Badge>
         <span className="flex-1" />
-        <Button asChild variant="ghost" size="icon-sm" aria-label="Edit point">
-          <Link href={`/points/${summary.id}/edit`}>
-            <PencilIcon />
-          </Link>
-        </Button>
+        {canEdit && (
+          <Button asChild variant="ghost" size="icon-sm" aria-label="Edit point">
+            <Link href={`/points/${summary.id}/edit`}>
+              <PencilIcon />
+            </Link>
+          </Button>
+        )}
         <Button variant="ghost" size="icon-sm" aria-label="Close details" onClick={onClose}>
           <XIcon />
         </Button>

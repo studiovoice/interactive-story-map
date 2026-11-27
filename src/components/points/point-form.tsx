@@ -156,6 +156,8 @@ export function PointForm({
     tags: [],
     contributor,
     media: media.filter((m) => m.url || m.storageKey),
+    source: point?.source ?? "staff",
+    createdBy: point?.createdBy ?? null,
     createdAt: "",
     updatedAt: "",
   }

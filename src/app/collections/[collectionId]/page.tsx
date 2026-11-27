@@ -18,10 +18,13 @@ import {
 } from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
+import { requireStaff } from "@/lib/auth/page"
+import { getViewer } from "@/lib/auth/server"
 import { getCollection, getStoriesByCollection } from "@/lib/queries"
 import { formatRange } from "@/lib/time"
 
 export async function generateMetadata({ params }: PageProps<"/collections/[collectionId]">): Promise<Metadata> {
+  if (!(await getViewer())) return { title: "Collection" }
   const c = await getCollection((await params).collectionId)
   return { title: c?.title ?? "Collection not found" }
 }
@@ -38,6 +41,8 @@ export default function CollectionPage({ params }: PageProps<"/collections/[coll
 
 async function CollectionDetail({ params }: Pick<PageProps<"/collections/[collectionId]">, "params">) {
   const { collectionId } = await params
+  // Staff only for now; both roles may manage collections and stories.
+  await requireStaff(`/collections/${collectionId}`)
   const [collection, stories] = await Promise.all([getCollection(collectionId), getStoriesByCollection(collectionId)])
   if (!collection) notFound()
 

@@ -88,8 +88,33 @@ export const pointInputSchema = z.object({
 })
 export type PointInput = z.input<typeof pointInputSchema>
 
+/**
+ * The part of a point curators may change: its tags and when it happened. All three are required
+ * (no defaults), so a partial request can't quietly clear a field; other keys are dropped.
+ */
+export const pointMetadataSchema = z.object({
+  tags: pointInputSchema.shape.tags.unwrap(),
+  capturedAt: pointInputSchema.shape.capturedAt.unwrap(),
+  timePrecision: pointInputSchema.shape.timePrecision.unwrap(),
+})
+export type PointMetadata = z.input<typeof pointMetadataSchema>
+
+/**
+ * Where a point came from, set once when it's created: `staff` (an admin or curator added it) or
+ * `public` (an anonymous submission, once those exist).
+ */
+export const pointSources = ["staff", "public"] as const
+export const pointSourceSchema = z.enum(pointSources)
+export type PointSource = z.infer<typeof pointSourceSchema>
+
+/** Who made a point. Not user input: the server sets it from the session. */
+export type PointOrigin = { source: PointSource; createdBy: string | null }
+
 export const pointSchema = pointInputSchema.extend({
   id: idSchema,
+  source: pointSourceSchema.default("staff"),
+  /** The staff member's user id; null for public submissions and points from before sign-in existed. */
+  createdBy: idSchema.nullable().default(null),
   createdAt: z.string(),
   updatedAt: z.string(),
 })

@@ -8,6 +8,8 @@ const point = (id: string, capturedAt: string | null): Point => ({
   description: "",
   location: [0, 0],
   locationPrecision: "exact",
+  source: "staff",
+  createdBy: null,
   locationRadiusM: null,
   placeName: "",
   capturedAt,

@@ -3,6 +3,7 @@ import "server-only"
 import { cache } from "react"
 import { connection } from "next/server"
 import { store } from "@/lib/data"
+import type { PointPageOptions } from "@/lib/data/repository"
 
 /*
  * Read helpers for Server Components. `connection()` marks the read as request-time
@@ -27,9 +28,9 @@ export const getMapPoints = cache(async () => {
 })
 
 /** One page of the points table (see `PointRepository.page`). */
-export const getPointPage = cache(async (q: string, page: number) => {
+export const getPointPage = cache(async (opts: PointPageOptions) => {
   await connection()
-  return store.points.page({ q, page })
+  return store.points.page(opts)
 })
 
 export const getCollections = cache(async () => {

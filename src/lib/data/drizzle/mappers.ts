@@ -60,6 +60,8 @@ export function toPoint(r: PointRow): Point {
     tags: r.tags,
     contributor: r.contributor,
     media: r.media,
+    source: r.source,
+    createdBy: r.createdBy,
     createdAt: toIso(r.createdAt),
     updatedAt: toIso(r.updatedAt),
   }

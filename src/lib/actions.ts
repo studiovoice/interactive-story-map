@@ -1,14 +1,17 @@
 "use server"
 
 /*
- * All mutations. Each action validates with the same zod schemas the repositories use,
- * talks to `store` only, and revalidates the whole app (data is small; keeps every
- * page fresh after any write).
+ * All mutations. Each action first checks that the viewer may do it (`requirePermission`; server
+ * actions are public endpoints, so hiding a button is never enough), validates with the same zod
+ * schemas the repositories use, talks to `store` only, and revalidates the whole app (data is
+ * small; keeps every page fresh after any write).
  *
- * TODO(auth): check the session here before every mutation once auth exists.
+ * Who may do what: src/lib/auth/permissions.ts.
  */
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
+import { can, type Permissions } from "@/lib/auth/permissions"
+import { AuthError, getViewer, requirePermission } from "@/lib/auth/server"
 import { store, NotFoundError } from "@/lib/data"
 import { getStorage, mediaMaxBytes } from "@/lib/storage"
 import {
@@ -24,12 +27,14 @@ import {
   chapterDraftSchema,
   collectionInputSchema,
   pointInputSchema,
+  pointMetadataSchema,
   storyInputSchema,
   type ChapterDraft,
   type Collection,
   type CollectionInput,
   type Point,
   type PointInput,
+  type PointMetadata,
   type Story,
   type StoryDetail,
   type StoryInput,
@@ -51,7 +56,9 @@ async function run<T>(fn: () => Promise<T>, { revalidate = true } = {}): Promise
         fieldErrors: z.flattenError(err).fieldErrors as Record<string, string[]>,
       }
     }
-    if (err instanceof NotFoundError || err instanceof MediaError) return { ok: false, error: err.message }
+    if (err instanceof NotFoundError || err instanceof MediaError || err instanceof AuthError) {
+      return { ok: false, error: err.message }
+    }
     console.error(err)
     return { ok: false, error: "Something went wrong. Please try again." }
   }
@@ -61,15 +68,18 @@ async function run<T>(fn: () => Promise<T>, { revalidate = true } = {}): Promise
 
 export async function createPoint(input: PointInput): Promise<ActionResult<Point>> {
   return run(async () => {
+    const viewer = await requirePermission({ point: ["create"] })
     const data = pointInputSchema.parse(input)
     return saveWithStoredMedia(getStorage(), mediaMaxBytes(), data.media, [], (media) =>
-      store.points.create({ ...data, media }),
+      store.points.create({ ...data, media }, { source: "staff", createdBy: viewer.id }),
     )
   })
 }
 
+/** Every field of a point, including its location and files. Admins only. */
 export async function updatePoint(id: string, input: PointInput): Promise<ActionResult<Point>> {
   return run(async () => {
+    await requirePermission({ point: ["edit"] })
     const data = pointInputSchema.parse(input)
     const previous = await store.points.get(id)
     if (!previous) throw new NotFoundError("Point", id)
@@ -83,8 +93,21 @@ export async function updatePoint(id: string, input: PointInput): Promise<Action
   })
 }
 
+/**
+ * Only a point's metadata: tags, time and time precision. What curators may change; everything
+ * else about the point stays as it is.
+ */
+export async function updatePointMetadata(id: string, input: PointMetadata): Promise<ActionResult<Point>> {
+  return run(async () => {
+    await requirePermission({ point: ["edit-metadata"] })
+    const data = pointMetadataSchema.parse(input)
+    return store.points.update(id, data)
+  })
+}
+
 export async function deletePoint(id: string): Promise<ActionResult> {
   return run(async () => {
+    await requirePermission({ point: ["delete"] })
     const previous = await store.points.get(id)
     await store.points.delete(id)
     if (previous) await deleteStoredMedia(getStorage(), removedStorageKeys(previous.media, []))
@@ -101,21 +124,36 @@ export async function deletePoint(id: string): Promise<ActionResult> {
  */
 export async function createMediaUpload(input: MediaUploadRequest): Promise<ActionResult<MediaUpload>> {
   // Nothing changes until the point is saved, so no revalidation.
-  return run(() => presignMediaUpload(getStorage(), mediaMaxBytes(), input), { revalidate: false })
+  return run(
+    async () => {
+      // Uploads are only for adding a point or editing its files.
+      await requireAny([{ point: ["create"] }, { point: ["edit"] }])
+      return presignMediaUpload(getStorage(), mediaMaxBytes(), input)
+    },
+    { revalidate: false },
+  )
 }
 
 /* ───────────── collections ───────────── */
 
 export async function createCollection(input: CollectionInput): Promise<ActionResult<Collection>> {
-  return run(() => store.collections.create(collectionInputSchema.parse(input)))
+  return run(async () => {
+    await requirePermission({ collection: ["create"] })
+    return store.collections.create(collectionInputSchema.parse(input))
+  })
 }
 
 export async function updateCollection(id: string, input: CollectionInput): Promise<ActionResult<Collection>> {
-  return run(() => store.collections.update(id, collectionInputSchema.parse(input)))
+  return run(async () => {
+    await requirePermission({ collection: ["edit"] })
+    return store.collections.update(id, collectionInputSchema.parse(input))
+  })
 }
 
+/** Also deletes the collection's stories (never its points). */
 export async function deleteCollection(id: string): Promise<ActionResult> {
   return run(async () => {
+    await requirePermission({ collection: ["delete"] })
     await store.collections.delete(id)
     return undefined
   })
@@ -124,15 +162,24 @@ export async function deleteCollection(id: string): Promise<ActionResult> {
 /* ───────────── stories ───────────── */
 
 export async function createStory(input: StoryInput): Promise<ActionResult<Story>> {
-  return run(() => store.stories.create(storyInputSchema.parse(input)))
+  return run(async () => {
+    const data = storyInputSchema.parse(input)
+    await requirePermission(data.status === "published" ? { story: ["create", "publish"] } : { story: ["create"] })
+    return store.stories.create(data)
+  })
 }
 
 export async function updateStory(id: string, input: Omit<StoryInput, "collectionId">): Promise<ActionResult<Story>> {
-  return run(() => store.stories.update(id, storyInputSchema.omit({ collectionId: true }).parse(input)))
+  return run(async () => {
+    const data = storyInputSchema.omit({ collectionId: true }).parse(input)
+    await requireStoryEdit(id, data.status)
+    return store.stories.update(id, data)
+  })
 }
 
 export async function deleteStory(id: string): Promise<ActionResult> {
   return run(async () => {
+    await requirePermission({ story: ["delete"] })
     await store.stories.delete(id)
     return undefined
   })
@@ -146,7 +193,24 @@ export async function saveStory(
   return run(async () => {
     const story = storyInputSchema.omit({ collectionId: true }).parse(input.story)
     const chapters = z.array(chapterDraftSchema).parse(input.chapters)
+    await requireStoryEdit(id, story.status)
     await store.stories.update(id, story)
     return store.stories.saveChapters(id, chapters)
   })
+}
+
+/** Editing a story; publishing or unpublishing it (a status change) needs `story:publish` too. */
+async function requireStoryEdit(id: string, status: StoryInput["status"]) {
+  const current = await store.stories.get(id)
+  if (!current) throw new NotFoundError("Story", id)
+  const statusChanges = status !== undefined && status !== current.status
+  await requirePermission(statusChanges ? { story: ["edit", "publish"] } : { story: ["edit"] })
+}
+
+/** Like `requirePermission`, but any one of these sets of permissions is enough. */
+async function requireAny(options: Permissions[]) {
+  const viewer = await getViewer()
+  if (!viewer) throw new AuthError("signed-out")
+  if (!options.some((p) => can(viewer.role, p))) throw new AuthError("forbidden")
+  return viewer
 }

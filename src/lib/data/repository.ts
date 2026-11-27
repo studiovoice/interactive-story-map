@@ -15,6 +15,8 @@ import type {
   CollectionSummary,
   Point,
   PointInput,
+  PointOrigin,
+  PointSource,
   Story,
   StoryDetail,
   StoryInput,
@@ -24,7 +26,11 @@ import type {
 export interface PointRepository {
   list(): Promise<Point[]>
   get(id: string): Promise<Point | null>
-  create(input: PointInput): Promise<Point>
+  /**
+   * `origin` says who made it (default: staff, creator unknown). Set by the server from the
+   * session, never from user input.
+   */
+  create(input: PointInput, origin?: PointOrigin): Promise<Point>
   update(id: string, input: Partial<PointInput>): Promise<Point>
   /** Also removes the point from any chapters it is in. */
   delete(id: string): Promise<void>
@@ -46,6 +52,10 @@ export interface PointRepository {
 
 export type PointPageOptions = {
   q?: string
+  /** Only points from the public or from staff. */
+  source?: PointSource
+  /** Only points this staff member added. */
+  createdBy?: string
   /** 1-based. */
   page?: number
   pageSize?: number

@@ -43,3 +43,15 @@ export const roleNames = Object.keys(roles) as Role[]
 export const roleLabels: Record<Role, string> = { admin: "Admin", curator: "Curator" }
 
 export const isRole = (value: unknown): value is Role => typeof value === "string" && value in roles
+
+/** What a check asks for, e.g. `{ point: ["edit-metadata"] }`. Every listed action must be allowed. */
+export type Permissions = { [K in keyof typeof statements]?: (typeof statements)[K][number][] }
+
+/**
+ * Whether `role` may do everything in `permissions`. `null` (the public, or an unknown role) may do
+ * nothing. Pure, so the server (the real check) and the browser (hiding buttons) agree.
+ */
+export function can(role: Role | null | undefined, permissions: Permissions): boolean {
+  if (!role || !isRole(role)) return false
+  return roles[role].authorize(permissions as Parameters<(typeof roles)[Role]["authorize"]>[0]).success
+}

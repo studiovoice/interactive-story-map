@@ -60,10 +60,29 @@ export function describeStoreContract(name: string, setup: () => Promise<StoreHa
           tags: [],
           contributor: "",
           media: [],
+          source: "staff",
+          createdBy: null,
         })
         expect(p.createdAt).toMatch(ISO)
         expect(p.updatedAt).toBe(p.createdAt)
         expect(await store.points.get(p.id)).toEqual(p)
+      })
+
+      it("records where a point came from, and keeps it on updates", async () => {
+        const p = await store.points.create(pointInput(), { source: "public", createdBy: null })
+        expect(p).toMatchObject({ source: "public", createdBy: null })
+        const updated = await store.points.update(p.id, { title: "Renamed" })
+        expect(updated).toMatchObject({ title: "Renamed", source: "public", createdBy: null })
+        // An update can't change the origin, even if it's smuggled into the input.
+        const sneaky = await store.points.update(p.id, { title: "Again", source: "staff" } as never)
+        expect(sneaky.source).toBe("public")
+      })
+
+      it("updates only the metadata fields given, leaving the rest", async () => {
+        const p = await store.points.create(pointInput({ title: "Keep me", tags: ["old"], capturedAt: "2026-03-14T10:05" }))
+        const updated = await store.points.update(p.id, { tags: ["new"], capturedAt: null, timePrecision: "approximate" })
+        expect(updated).toMatchObject({ title: "Keep me", tags: ["new"], capturedAt: null, timePrecision: "approximate" })
+        expect(updated.location).toEqual(p.location)
       })
 
       it("keeps every field exactly as given", async () => {

@@ -3,7 +3,7 @@
  * how it behaves. Takes the db so tests can pass PGlite or a test database;
  * the app gets its db from `./client.ts`.
  */
-import { asc, count, countDistinct, desc, eq, inArray, sql, type SQL } from "drizzle-orm"
+import { and, asc, count, countDistinct, desc, eq, inArray, sql, type SQL } from "drizzle-orm"
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core"
 import {
   chapterDraftSchema,
@@ -140,12 +140,14 @@ export function createDrizzleStore(db: Db): DataStore {
         const row = await getPointRow(db, id)
         return row ? toPoint(row) : null
       },
-      async create(input) {
+      async create(input, origin = { source: "staff", createdBy: null }) {
         const parsed = pointInputSchema.parse(input)
         const ts = now().toISOString()
         const point: Point = {
           ...parsed,
           ...normalizePointLocation(parsed),
+          source: origin.source,
+          createdBy: origin.createdBy,
           id: newId("pt"),
           createdAt: ts,
           updatedAt: ts,
@@ -221,7 +223,11 @@ export function createDrizzleStore(db: Db): DataStore {
       async page(opts) {
         const { limit, offset } = pageBounds(opts)
         const q = opts.q?.trim()
-        const where = q ? sql`${points.searchText} like ${likePattern(q)}` : undefined
+        const where = and(
+          q ? sql`${points.searchText} like ${likePattern(q)}` : undefined,
+          opts.source ? eq(points.source, opts.source) : undefined,
+          opts.createdBy ? eq(points.createdBy, opts.createdBy) : undefined,
+        )
         // Two queries: a window count would make Postgres read every match before the limit.
         // `nulls last` matches points_updated_at_idx, so the first pages read it in order.
         const [rows, [{ total }]] = await Promise.all([

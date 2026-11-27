@@ -25,9 +25,11 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { deletePoint } from "@/lib/actions"
-import type { Point, PointListRow } from "@/lib/domain/schema"
+import { can, type Role } from "@/lib/auth/permissions"
+import type { Point, PointListRow, PointSource } from "@/lib/domain/schema"
 import { formatCaptured } from "@/lib/time"
 import { mediaSummary } from "@/lib/points/media"
 import { cn } from "@/lib/utils"
@@ -38,31 +40,49 @@ const fmt = new Intl.NumberFormat("en-US")
 /** Wait this long after the last keystroke before filtering on the server. */
 const FILTER_DELAY_MS = 250
 
-function pageHref(q: string, page: number) {
+/** What the table is filtered by (`?q=`, `?from=`, `?by=`). */
+export type PointFilters = { q: string; from?: PointSource; by?: string }
+
+function pageHref({ q, from, by }: PointFilters, page: number) {
   const params = new URLSearchParams()
   if (q.trim()) params.set("q", q.trim())
+  if (from) params.set("from", from)
+  if (by) params.set("by", by)
   if (page > 1) params.set("page", String(page))
   const s = params.toString()
   return s ? `/points?${s}` : "/points"
 }
 
+/** The "Added by" filter: everyone, public submissions, staff, or one staff member (`user:<id>`). */
+function addedByValue({ from, by }: PointFilters) {
+  return by ? `user:${by}` : (from ?? "all")
+}
+
 /**
- * One page of points (paged and filtered on the server, from `?q=` and `?page=`). Typing in the
- * filter updates the URL after a short pause; the current rows stay, dimmed, until the new page arrives.
+ * One page of points (paged and filtered on the server, from `?q=`, `?from=`, `?by=` and `?page=`).
+ * Typing in the filter updates the URL after a short pause; the current rows stay, dimmed, until the
+ * new page arrives. Row actions depend on `role` (the server checks them again).
  */
 export function PointsTable({
   rows,
   total,
-  q,
+  filters,
   page,
   pageSize,
+  role,
+  staff,
 }: {
   rows: PointListRow[]
   total: number
-  q: string
+  filters: PointFilters
   page: number
   pageSize: number
+  role: Role
+  /** Staff accounts, to name who added each point. */
+  staff: { id: string; name: string }[]
 }) {
+  const { q } = filters
+  const staffName = new Map(staff.map((m) => [m.id, m.name]))
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [query, setQuery] = useState(q)
@@ -82,12 +102,20 @@ export function PointsTable({
     if (query.trim() === sent.trim()) return
     const t = setTimeout(() => {
       setSent(query)
-      startTransition(() => router.replace(pageHref(query, 1), { scroll: false }))
+      startTransition(() => router.replace(pageHref({ ...filters, q: query }, 1), { scroll: false }))
     }, FILTER_DELAY_MS)
     return () => clearTimeout(t)
-  }, [query, sent, router])
+  }, [query, sent, router, filters])
 
-  if (!total && !q.trim() && !query.trim()) {
+  function filterAddedBy(value: string) {
+    const next: PointFilters = { q: query }
+    if (value.startsWith("user:")) next.by = value.slice(5)
+    else if (value === "public" || value === "staff") next.from = value
+    startTransition(() => router.replace(pageHref(next, 1), { scroll: false }))
+  }
+
+  const filtered = !!(q.trim() || query.trim() || filters.from || filters.by)
+  if (!total && !filtered) {
     return (
       <Empty className="border">
         <EmptyHeader>
@@ -97,13 +125,15 @@ export function PointsTable({
           <EmptyTitle>No points yet</EmptyTitle>
           <EmptyDescription>Points are uploads (photos, videos, audio or a note) at a place and time.</EmptyDescription>
         </EmptyHeader>
-        <EmptyContent>
-          <Button asChild>
-            <Link href="/points/new">
-              <PlusIcon /> New point
-            </Link>
-          </Button>
-        </EmptyContent>
+        {can(role, { point: ["create"] }) && (
+          <EmptyContent>
+            <Button asChild>
+              <Link href="/points/new">
+                <PlusIcon /> New point
+              </Link>
+            </Button>
+          </EmptyContent>
+        )}
       </Empty>
     )
   }
@@ -113,15 +143,33 @@ export function PointsTable({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="relative max-w-sm">
-        <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 z-[1] size-3.5 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Filter by title, place or tag"
-          className="pl-8"
-          aria-label="Filter points"
-        />
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative w-full max-w-sm">
+          <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 z-[1] size-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Filter by title, place or tag"
+            className="pl-8"
+            aria-label="Filter points"
+          />
+        </div>
+        <Select value={addedByValue(filters)} onValueChange={filterAddedBy}>
+          <SelectTrigger className="w-48" aria-label="Added by">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Added by anyone</SelectItem>
+            <SelectItem value="public">Public submissions</SelectItem>
+            <SelectItem value="staff">Staff</SelectItem>
+            {staff.length > 0 && <SelectSeparator />}
+            {staff.map((m) => (
+              <SelectItem key={m.id} value={`user:${m.id}`}>
+                {m.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <div
         className={cn("overflow-hidden rounded-xl border transition-opacity", pending && "opacity-60")}
@@ -135,21 +183,27 @@ export function PointsTable({
               <TableHead className="hidden md:table-cell">Captured</TableHead>
               <TableHead className="hidden lg:table-cell">Tags</TableHead>
               <TableHead className="hidden sm:table-cell">Stories</TableHead>
+              <TableHead className="hidden xl:table-cell">Added by</TableHead>
               <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.map((p) => {
               const storyCount = p.storyCount
+              const canEdit = can(role, { point: ["edit"] }) || can(role, { point: ["edit-metadata"] })
               return (
                 <TableRow key={p.id}>
                   <TableCell>
                     <PointMedia point={p} badge={false} className="h-9 w-14 rounded-md" />
                   </TableCell>
                   <TableCell className="max-w-0 min-w-48">
-                    <Link href={`/points/${p.id}/edit`} className="block truncate font-medium hover:underline">
-                      {p.title}
-                    </Link>
+                    {canEdit ? (
+                      <Link href={`/points/${p.id}/edit`} className="block truncate font-medium hover:underline">
+                        {p.title}
+                      </Link>
+                    ) : (
+                      <span className="block truncate font-medium">{p.title}</span>
+                    )}
                     <div className="truncate text-xs text-muted-foreground">
                       {mediaSummary(p.media)} · {p.placeName || "Unnamed place"}
                       {p.locationPrecision === "approximate" && " · approx. location"}
@@ -178,24 +232,33 @@ export function PointsTable({
                       <span className="text-xs text-muted-foreground">—</span>
                     )}
                   </TableCell>
+                  <TableCell className="hidden text-xs whitespace-nowrap text-muted-foreground xl:table-cell">
+                    {p.source === "public"
+                      ? "Public"
+                      : p.createdBy
+                        ? (staffName.get(p.createdBy) ?? "Staff")
+                        : "Staff (before sign-in)"}
+                  </TableCell>
                   <TableCell>
-                    <RowMenu point={p} usedIn={storyCount} />
+                    <RowMenu point={p} usedIn={storyCount} role={role} />
                   </TableCell>
                 </TableRow>
               )
             })}
             {!rows.length && (
               <TableRow>
-                <TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
+                <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
                   {total ? (
                     <>
                       This page is past the end.{" "}
-                      <Link href={pageHref(q, pages)} className="underline">
+                      <Link href={pageHref(filters, pages)} className="underline">
                         Go to the last page
                       </Link>
                     </>
-                  ) : (
+                  ) : q.trim() ? (
                     <>No points match “{q}”.</>
+                  ) : (
+                    <>No points match these filters.</>
                   )}
                 </TableCell>
               </TableRow>
@@ -215,10 +278,10 @@ export function PointsTable({
               <span className="hidden sm:inline">
                 Page {fmt.format(Math.min(page, pages))} of {fmt.format(pages)}
               </span>
-              <PageLink href={page > 1 ? pageHref(q, Math.min(page, pages) - 1) : null} label="Previous page">
+              <PageLink href={page > 1 ? pageHref(filters, Math.min(page, pages) - 1) : null} label="Previous page">
                 <ChevronLeftIcon />
               </PageLink>
-              <PageLink href={page < pages ? pageHref(q, page + 1) : null} label="Next page">
+              <PageLink href={page < pages ? pageHref(filters, page + 1) : null} label="Next page">
                 <ChevronRightIcon />
               </PageLink>
             </div>
@@ -246,8 +309,12 @@ function PageLink({ href, label, children }: { href: string | null; label: strin
   )
 }
 
-function RowMenu({ point, usedIn }: { point: Point; usedIn: number }) {
+function RowMenu({ point, usedIn, role }: { point: Point; usedIn: number; role: Role }) {
   const [confirming, setConfirming] = useState(false)
+  const canEditAll = can(role, { point: ["edit"] })
+  const canEditMetadata = can(role, { point: ["edit-metadata"] })
+  const canDelete = can(role, { point: ["delete"] })
+  if (!canEditAll && !canEditMetadata && !canDelete) return null
   return (
     <>
       <DropdownMenu>
@@ -257,15 +324,21 @@ function RowMenu({ point, usedIn }: { point: Point; usedIn: number }) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem asChild>
-            <Link href={`/points/${point.id}/edit`}>
-              <PencilIcon /> Edit
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem variant="destructive" onSelect={() => setConfirming(true)}>
-            <Trash2Icon /> Delete
-          </DropdownMenuItem>
+          {(canEditAll || canEditMetadata) && (
+            <DropdownMenuItem asChild>
+              <Link href={`/points/${point.id}/edit`}>
+                <PencilIcon /> {canEditAll ? "Edit" : "Edit time and tags"}
+              </Link>
+            </DropdownMenuItem>
+          )}
+          {canDelete && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem variant="destructive" onSelect={() => setConfirming(true)}>
+                <Trash2Icon /> Delete
+              </DropdownMenuItem>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
       <ConfirmDelete

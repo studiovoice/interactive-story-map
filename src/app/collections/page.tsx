@@ -8,6 +8,7 @@ import { PageLoading } from "@/components/page-loading"
 import { Button } from "@/components/ui/button"
 import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
+import { requireStaff } from "@/lib/auth/page"
 import { getCollections } from "@/lib/queries"
 import { formatInstant } from "@/lib/time"
 
@@ -37,6 +38,8 @@ export default function CollectionsPage() {
 }
 
 async function CollectionGrid() {
+  // Staff only for now; both roles may manage collections.
+  await requireStaff("/collections")
   const collections = await getCollections()
   if (!collections.length) {
     return (

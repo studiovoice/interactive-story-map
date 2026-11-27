@@ -23,12 +23,14 @@ import {
 import {
   chapterConnections,
   locationPrecisions,
+  pointSources,
   storyStatuses,
   timePrecisions,
   type Camera,
   type LngLat,
   type MediaAsset,
 } from "../../domain/schema" // relative: drizzle-kit doesn't resolve the @/ alias
+import { users } from "./auth-schema"
 
 /** `CHECK (col IN (...))` from one of the domain's `as const` arrays. */
 const oneOf = (col: AnyPgColumn, values: readonly string[]): SQL =>
@@ -53,6 +55,13 @@ export const points = pgTable(
     timePrecision: text("time_precision").$type<(typeof timePrecisions)[number]>().notNull(),
     tags: text("tags").array().notNull().default(sql`'{}'::text[]`),
     contributor: text("contributor").notNull().default(""),
+    /** `staff` or `public`, set once at creation (see `pointSources`). */
+    source: text("source").$type<(typeof pointSources)[number]>().notNull(),
+    /**
+     * The staff member who added it (Better Auth's `auth.users`), or null for public submissions and
+     * older points. RESTRICT: a staff account with points can't be deleted; ban it instead.
+     */
+    createdBy: text("created_by").references(() => users.id, { onDelete: "restrict" }),
     media: jsonb("media").$type<MediaAsset[]>().notNull().default(sql`'[]'::jsonb`),
     /**
      * Lower-cased title, description, place name and tags joined by U+001F, kept in sync by the
@@ -68,6 +77,8 @@ export const points = pgTable(
     index("points_updated_at_idx").on(t.updatedAt.desc()),
     check("points_location_precision_check", oneOf(t.locationPrecision, locationPrecisions)),
     check("points_time_precision_check", oneOf(t.timePrecision, timePrecisions)),
+    check("points_source_check", oneOf(t.source, pointSources)),
+    index("points_created_by_idx").on(t.createdBy),
   ],
 )
 

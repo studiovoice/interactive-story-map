@@ -6,13 +6,15 @@ import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { UserMenu } from "@/components/auth/user-menu"
 import { SettingsMenu } from "@/components/settings-menu"
+import { useViewerRole } from "@/lib/auth/client"
 import { cn } from "@/lib/utils"
 
 const NAV = [
   { href: "/", label: "Map", icon: MapIcon, match: (p: string) => p === "/" },
-  { href: "/points", label: "Points", icon: MapPinIcon, match: (p: string) => p.startsWith("/points") },
+  { href: "/points", label: "Points", icon: MapPinIcon, staff: true, match: (p: string) => p.startsWith("/points") },
   {
     href: "/collections",
+    staff: true,
     label: "Collections",
     icon: FolderOpenIcon,
     match: (p: string) => p.startsWith("/collections") || p.startsWith("/stories"),
@@ -28,6 +30,8 @@ function HeaderWithPath() {
 }
 
 function Header({ pathname }: { pathname: string }) {
+  // Points and Collections are staff pages; the public only gets the map (for now).
+  const staff = useViewerRole() !== null
   return (
     <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center gap-2 border-b bg-background/90 px-3 backdrop-blur sm:gap-4 sm:px-4">
       <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
@@ -37,7 +41,7 @@ function Header({ pathname }: { pathname: string }) {
         <span className="hidden sm:inline">VOICE</span>
       </Link>
       <nav className="flex items-center gap-1">
-        {NAV.map(({ href, label, icon: Icon, match }) => (
+        {NAV.filter((item) => staff || !item.staff).map(({ href, label, icon: Icon, match }) => (
           <Button
             key={href}
             asChild
